@@ -238,6 +238,148 @@ describe("KimiCodeParser", () => {
     });
   });
 
+  it("accepts snake_case token fields in 0.9 wire.jsonl", async () => {
+    const rootDir = makeTempDir("tokenarena-kimi-snake-");
+    const sessionsDir = join(rootDir, "sessions");
+    const wireDir = join(
+      sessionsDir,
+      "wd_my-project_abc123",
+      "session-snake",
+      "agents",
+      "main",
+    );
+    mkdirSync(wireDir, { recursive: true });
+
+    writeFileSync(
+      join(wireDir, "wire.jsonl"),
+      [
+        JSON.stringify({ type: "metadata", protocol_version: "1.3" }),
+        JSON.stringify({
+          type: "usage.record",
+          model: "kimi-code/kimi-for-coding",
+          usage: {
+            input_other: 5000,
+            output: 200,
+            cache_read: 10000,
+          },
+          usageScope: "turn",
+          time: 1780306248482,
+        }),
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const parser = new KimiCodeParser({
+      sessionsDir: join(rootDir, "nonexistent"),
+      newSessionsDir: sessionsDir,
+    });
+    const result = await parser.parse();
+
+    expect(result.buckets).toHaveLength(1);
+    expect(result.buckets[0]).toMatchObject({
+      source: "kimi-code",
+      inputTokens: 5000,
+      outputTokens: 200,
+      cachedTokens: 10000,
+      totalTokens: 15200,
+    });
+  });
+
+  it("recognizes UserMessage inside 0.9 wire.jsonl", async () => {
+    const rootDir = makeTempDir("tokenarena-kimi-roles-");
+    const sessionsDir = join(rootDir, "sessions");
+    const wireDir = join(
+      sessionsDir,
+      "wd_my-project_abc123",
+      "session-roles",
+      "agents",
+      "main",
+    );
+    mkdirSync(wireDir, { recursive: true });
+
+    writeFileSync(
+      join(wireDir, "wire.jsonl"),
+      [
+        JSON.stringify({ type: "metadata", protocol_version: "1.3" }),
+        JSON.stringify({
+          type: "UserMessage",
+          timestamp: "2026-06-05T10:00:00.000Z",
+        }),
+        JSON.stringify({
+          type: "usage.record",
+          model: "kimi-code/kimi-for-coding",
+          usage: {
+            inputOther: 5000,
+            output: 200,
+            inputCacheRead: 10000,
+          },
+          usageScope: "turn",
+          time: 1780306248482,
+        }),
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const parser = new KimiCodeParser({
+      sessionsDir: join(rootDir, "nonexistent"),
+      newSessionsDir: sessionsDir,
+    });
+    const result = await parser.parse();
+
+    expect(result.sessions).toHaveLength(1);
+    expect(result.sessions[0]).toMatchObject({
+      source: "kimi-code",
+      userMessageCount: 1,
+    });
+  });
+
+  it("recognizes the `usage` type alias in 0.9 wire.jsonl", async () => {
+    const rootDir = makeTempDir("tokenarena-kimi-alias-");
+    const sessionsDir = join(rootDir, "sessions");
+    const wireDir = join(
+      sessionsDir,
+      "wd_my-project_abc123",
+      "session-alias",
+      "agents",
+      "main",
+    );
+    mkdirSync(wireDir, { recursive: true });
+
+    writeFileSync(
+      join(wireDir, "wire.jsonl"),
+      [
+        JSON.stringify({ type: "metadata", protocol_version: "1.3" }),
+        JSON.stringify({
+          type: "usage",
+          model: "kimi-for-coding",
+          usage: {
+            inputOther: 4000,
+            output: 100,
+            inputCacheRead: 8000,
+          },
+          usageScope: "turn",
+          time: 1780306248482,
+        }),
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const parser = new KimiCodeParser({
+      sessionsDir: join(rootDir, "nonexistent"),
+      newSessionsDir: sessionsDir,
+    });
+    const result = await parser.parse();
+
+    expect(result.buckets).toHaveLength(1);
+    expect(result.buckets[0]).toMatchObject({
+      source: "kimi-code",
+      inputTokens: 4000,
+      outputTokens: 100,
+      cachedTokens: 8000,
+    });
+    expect(result.sessions).toHaveLength(1);
+  });
+
   it("scans both old and new directories", async () => {
     const rootDir = makeTempDir("tokenarena-kimi-both-");
 

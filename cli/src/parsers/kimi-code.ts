@@ -19,13 +19,30 @@ const OLD_SESSIONS_DIR = join(homedir(), ".kimi", "sessions");
 const NEW_SESSIONS_DIR = join(homedir(), ".kimi-code", "sessions");
 const OLD_CONFIG_PATH = join(homedir(), ".kimi", "kimi.json");
 
-const USER_EVENT_TYPES = new Set(["UserMessage", "user_message", "Input"]);
+const USER_EVENT_TYPES = new Set([
+  "UserMessage",
+  "user_message",
+  "Input",
+  "user.message",
+  "user.turn",
+  "turn.user",
+]);
 const ASSISTANT_EVENT_TYPES = new Set([
   "AssistantMessage",
   "assistant_message",
   "Output",
   "ModelOutput",
   "AssistantOutput",
+  "assistant.message",
+  "assistant.turn",
+  "turn.assistant",
+]);
+const USAGE_RECORD_TYPES = new Set([
+  "usage.record",
+  "usage",
+  "token.usage",
+  "turn.usage",
+  "turn.record",
 ]);
 
 interface KimiTokenUsage {
@@ -51,16 +68,16 @@ interface KimiEvent {
 }
 
 interface NewKimiUsageRecord {
-  type: "usage.record";
+  type: string;
   model?: string;
-  usage?: {
-    inputOther?: unknown;
-    output?: unknown;
-    inputCacheRead?: unknown;
-    inputCacheCreation?: unknown;
-  };
+  usage?: Record<string, unknown>;
+  tokenUsage?: Record<string, unknown>;
+  token_usage?: Record<string, unknown>;
   usageScope?: string;
+  scope?: string;
   time?: number;
+  timestamp?: string | number;
+  role?: string;
 }
 
 export interface KimiCodeParserOptions {
@@ -80,6 +97,17 @@ function createToolDefinition(dataDir: string): ToolDefinition {
 function toSafeNumber(value: unknown): number {
   const numberValue = Number(value);
   return Number.isFinite(numberValue) ? numberValue : 0;
+}
+
+function readTokenUsage(
+  record: Record<string, unknown> | undefined,
+  ...candidates: string[]
+): number {
+  if (!record) return 0;
+  for (const key of candidates) {
+    if (record[key] !== undefined) return toSafeNumber(record[key]);
+  }
+  return 0;
 }
 
 function getPathLeaf(value: string): string {
@@ -385,20 +413,74 @@ export class KimiCodeParser implements IParser {
           continue;
         }
 
-        if (obj.type !== "usage.record") continue;
-        if (obj.usageScope === "session") continue;
+        if (!obj.type) continue;
 
-        const usage = obj.usage;
-        if (!usage) continue;
-
-        const timestamp = obj.time ? new Date(obj.time) : null;
+        // Resolve timestamp once for both event types. Support both flat
+        // (`obj.time` / `obj.timestamp`) and 0.6-style wrapper
+        // (`obj.payload.timestamp`) shapes so role events from earlier
+        // migrations still get picked up.
+        const payload = (obj as { payload?: { timestamp?: string | number } })
+          .payload;
+        const rawTimestamp = obj.time ?? obj.timestamp ?? payload?.timestamp;
+        const timestamp =
+          rawTimestamp !== undefined && rawTimestamp !== null
+            ? new Date(rawTimestamp as string | number)
+            : null;
         if (!timestamp || Number.isNaN(timestamp.getTime())) continue;
 
-        const inputTokens = toSafeNumber(usage.inputOther);
-        const outputTokens = toSafeNumber(usage.output);
-        const cachedTokens = toSafeNumber(usage.inputCacheRead);
+        // 0.9 may still emit role events inside wire.jsonl. Forward them so
+        // extractSessions can compute durationSeconds and userMessageCount.
+        if (USER_EVENT_TYPES.has(obj.type) || obj.role === "user") {
+          sessionEvents.push({
+            sessionId,
+            source: TOOL_ID,
+            project: projectName,
+            timestamp,
+            role: "user",
+          });
+          continue;
+        }
+        if (ASSISTANT_EVENT_TYPES.has(obj.type) || obj.role === "assistant") {
+          sessionEvents.push({
+            sessionId,
+            source: TOOL_ID,
+            project: projectName,
+            timestamp,
+            role: "assistant",
+          });
+          // Fall through so the same event can also carry token usage below.
+          if (!USAGE_RECORD_TYPES.has(obj.type)) continue;
+        }
 
-        if (inputTokens === 0 && outputTokens === 0 && cachedTokens === 0) {
+        if (!USAGE_RECORD_TYPES.has(obj.type)) continue;
+        if (obj.usageScope === "session" || obj.scope === "session") continue;
+
+        const usage = obj.usage ?? obj.tokenUsage ?? obj.token_usage;
+        if (!usage) continue;
+
+        const inputTokens = readTokenUsage(usage, "inputOther", "input_other");
+        const outputTokens = readTokenUsage(usage, "output", "output_tokens");
+        const cachedTokens = readTokenUsage(
+          usage,
+          "inputCacheRead",
+          "input_cache_read",
+          "cache_read",
+          "cachedTokens",
+          "cached_tokens",
+        );
+        const cacheCreateTokens = readTokenUsage(
+          usage,
+          "inputCacheCreation",
+          "input_cache_creation",
+          "cache_creation",
+        );
+
+        if (
+          inputTokens === 0 &&
+          outputTokens === 0 &&
+          cachedTokens === 0 &&
+          cacheCreateTokens === 0
+        ) {
           continue;
         }
 
