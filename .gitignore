@@ -14,3 +14,6 @@ build
 !.env.example
 .agents/
 .claude/
+.gitnexus
+*.tar.gz
+*.tgz
