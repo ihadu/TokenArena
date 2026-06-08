@@ -16,22 +16,26 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "@/i18n/navigation";
+import { isCurrentUserAdmin, logAdminAccess } from "@/lib/admin";
 import { getOptionalSession } from "@/lib/session";
 import { buildAbsoluteUrl, getAppOrigin } from "@/lib/site-url";
 import { buildActivitySvgUrl } from "@/lib/social/heatmap-svg";
 import { getPublicProfilePageData } from "@/lib/social/queries";
+import { dashboardQuerySchema } from "@/lib/usage/contracts";
 import {
   formatDuration,
   formatTokenCount,
   formatUsdAmount,
 } from "@/lib/usage/format";
 import { isWechatShareConfigured } from "@/lib/wechat/share-server";
+import { AdminDashboardBlock } from "./admin-dashboard-block";
 
 type PublicProfilePageProps = {
   params: Promise<{
     locale: string;
     username: string;
   }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 const joinedDateFormatterCache = new Map<string, Intl.DateTimeFormat>();
@@ -50,6 +54,29 @@ function formatJoinedDate(value: Date, locale: string) {
 
 function getInitial(value: string) {
   return value.trim().charAt(0).toUpperCase() || "?";
+}
+
+function firstSearchValue(
+  value: string | string[] | undefined,
+): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function resolveAdminQuery(
+  params: Record<string, string | string[] | undefined>,
+) {
+  const parsed = dashboardQuerySchema.safeParse({
+    preset: firstSearchValue(params.preset),
+    from: firstSearchValue(params.from),
+    to: firstSearchValue(params.to),
+    apiKeyId: firstSearchValue(params.apiKeyId),
+    deviceId: firstSearchValue(params.deviceId),
+    source: firstSearchValue(params.source),
+    model: firstSearchValue(params.model),
+    projectKey: firstSearchValue(params.projectKey),
+  });
+  if (parsed.success) return parsed.data;
+  return dashboardQuerySchema.parse({});
 }
 
 export async function generateMetadata({
@@ -104,6 +131,7 @@ export async function generateMetadata({
 
 export default async function PublicProfilePage({
   params,
+  searchParams,
 }: PublicProfilePageProps) {
   const [{ locale, username }, viewer] = await Promise.all([
     params,
@@ -119,6 +147,19 @@ export default async function PublicProfilePage({
 
   if (!profile) {
     notFound();
+  }
+
+  const resolvedSearchParams = (searchParams ? await searchParams : {}) ?? {};
+  const adminQuery = resolveAdminQuery(resolvedSearchParams);
+  const isAdmin = await isCurrentUserAdmin();
+  const canRenderAdminBlock = isAdmin && viewer?.user.id !== profile.id;
+
+  if (canRenderAdminBlock && viewer) {
+    void logAdminAccess({
+      viewerId: viewer.user.id,
+      targetUserId: profile.id,
+      action: "view_usage_dashboard",
+    });
   }
 
   const wechatShareEnabled = isWechatShareConfigured();
@@ -404,6 +445,13 @@ export default async function PublicProfilePage({
           </div>
         </div>
       </div>
+      {canRenderAdminBlock ? (
+        <AdminDashboardBlock
+          locale={locale}
+          targetUserId={profile.id}
+          query={adminQuery}
+        />
+      ) : null}
     </SocialShell>
   );
 }

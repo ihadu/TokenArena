@@ -81,6 +81,8 @@ model User {
   leaderboardPeriodEntries   LeaderboardPeriodEntry[]
   followers                  Follow[]                   @relation("FollowFollowing")
   following                  Follow[]                   @relation("FollowFollower")
+  adminAccessLogsAsViewer    AdminAccessLog[]           @relation("AdminAccessLogViewer")
+  adminAccessLogsAsTarget    AdminAccessLog[]           @relation("AdminAccessLogTarget")
 
   @@unique([email])
   @@map("user")
@@ -382,4 +384,18 @@ model LeaderboardPeriodEntry {
   @@index([resultId, rank])
   @@index([userId, createdAt])
   @@map("leaderboard_period_entry")
+}
+
+model AdminAccessLog {
+  id           String   @id @default(cuid())
+  viewerId     String
+  targetUserId String
+  action       String
+  createdAt    DateTime @default(now())
+  viewer       User     @relation("AdminAccessLogViewer", fields: [viewerId],     references: [id], onDelete: Cascade)
+  target       User     @relation("AdminAccessLogTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@index([targetUserId, createdAt])
+  @@index([viewerId, createdAt])
+  @@map("admin_access_log")
 }

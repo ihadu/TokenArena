@@ -1034,5 +1034,10 @@
         "description": "登上全站总榜总 token 排名第 1。"
       }
     }
+  },
+  "admin": {
+    "badge": "管理员",
+    "dashboardTitle": "完整用量仪表盘",
+    "notice": "此视图为私密数据，对方不可见。访问已记录。"
   }
 }

@@ -25,6 +25,14 @@ AUTH_MODE=self-hosted
 可选：
 
 ```bash
+# 管理员白名单（逗号分隔用户名），可访问 /u/[username] 查看任意用户的完整用量仪表盘
+# 大小写不敏感，进程启动时读取，修改后需重启
+ADMIN_USERNAMES=
+```
+
+可选：
+
+```bash
 SHADOW_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/token_arena_shadow
 ```
 

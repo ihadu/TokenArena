@@ -1034,5 +1034,10 @@
         "description": "Reach #1 on the global all-time total-tokens leaderboard."
       }
     }
+  },
+  "admin": {
+    "badge": "ADMIN",
+    "dashboardTitle": "Full usage dashboard",
+    "notice": "This view is private data, not visible to the user. Access is logged."
   }
 }

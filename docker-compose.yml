@@ -26,6 +26,7 @@ services:
       - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET:-}
       - CLARITY_ID=${CLARITY_ID:-}
       - GA_SECRET=${GA_SECRET:-}
+      - ADMIN_USERNAMES=${ADMIN_USERNAMES:-}
     depends_on:
       db:
         condition: service_healthy
