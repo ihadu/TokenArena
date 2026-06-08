@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 # Stage 1: Install dependencies
 FROM node:26-alpine AS deps
 WORKDIR /app
