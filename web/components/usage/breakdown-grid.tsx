@@ -7,7 +7,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatTokenCount, formatUsdAmount } from "@/lib/usage/format";
-import type { BreakdownRow, UsageBreakdowns } from "@/lib/usage/types";
+import { getProjectDisplayLabel } from "@/lib/usage/project-display";
+import type { BreakdownRow, ProjectMode, UsageBreakdowns } from "@/lib/usage/types";
 import { CollapsibleSection } from "./collapsible-section";
 
 const BreakdownChartInner = dynamic(
@@ -25,6 +26,8 @@ type BreakdownGridProps = {
   breakdowns: UsageBreakdowns;
   defaultOpen?: boolean;
   defaultMetricView?: BreakdownMetricView;
+  projectMode?: ProjectMode;
+  viewerIsAdmin?: boolean;
 };
 
 type BreakdownMetricView = "tokens" | "cost";
@@ -238,12 +241,23 @@ export function BreakdownGrid({
   breakdowns,
   defaultOpen = true,
   defaultMetricView = "tokens",
+  projectMode = "hashed",
+  viewerIsAdmin = false,
 }: BreakdownGridProps) {
   const locale = useLocale();
   const t = useTranslations("usage.breakdowns");
   const [metricViews, setMetricViews] = useState<BreakdownMetricViews>(() =>
     createInitialMetricViews(defaultMetricView),
   );
+
+  const projectRows = breakdowns.projects.map((row) => ({
+    ...row,
+    name: getProjectDisplayLabel(row, { projectMode, viewerIsAdmin }),
+  }));
+  const breakdownsWithDisplay: UsageBreakdowns = {
+    ...breakdowns,
+    projects: projectRows,
+  };
 
   return (
     <CollapsibleSection
@@ -257,7 +271,7 @@ export function BreakdownGrid({
           const metric: BreakdownMetric =
             metricView === "cost" ? "estimatedCostUsd" : "totalTokens";
           const rows = getDisplayRows(
-            sortRowsByMetric(breakdowns[card.key], metric),
+            sortRowsByMetric(breakdownsWithDisplay[card.key], metric),
             t("others"),
           );
           const chartData = toChartData(rows, metric, locale);

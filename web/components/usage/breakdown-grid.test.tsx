@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
+import { getProjectDisplayLabel } from "@/lib/usage/project-display";
 import type { UsageBreakdowns } from "@/lib/usage/types";
 import { BreakdownGrid } from "./breakdown-grid";
 
@@ -256,5 +257,25 @@ describe("BreakdownGrid", () => {
       markup.match(/data-variant="secondary"[^>]*>Est\. Cost<\/button>/g) ?? [],
     ).toHaveLength(4);
     expect(markup).not.toContain("No priced usage in this range.");
+  });
+});
+
+describe("getProjectDisplayLabel in BreakdownGrid context", () => {
+  it("uses raw label for admin regardless of mode", () => {
+    expect(
+      getProjectDisplayLabel(
+        { key: "abc123def456abc1", name: "my-project" },
+        { projectMode: "hashed", viewerIsAdmin: true },
+      ),
+    ).toBe("my-project");
+  });
+
+  it("uses Project abc123 for self in hashed mode", () => {
+    expect(
+      getProjectDisplayLabel(
+        { key: "abc123def456abc1", name: "my-project" },
+        { projectMode: "hashed", viewerIsAdmin: false },
+      ),
+    ).toBe("Project abc123");
   });
 });
