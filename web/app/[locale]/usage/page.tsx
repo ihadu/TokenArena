@@ -191,6 +191,7 @@ export default async function UsagePage({
               filters={dashboard.filters}
               options={filterOptions}
               lastSyncedText={lastSyncedText}
+              projectMode={preference.projectMode}
               badgesSlot={
                 <ShareBadgesDialog
                   username={session.user.username}
@@ -212,10 +213,16 @@ export default async function UsagePage({
                 pricingSummary={dashboard.pricingSummary}
                 modelPricingRows={dashboard.modelPricingRows}
               />
-              <BreakdownGrid breakdowns={dashboard.breakdowns} />
+              <BreakdownGrid
+                breakdowns={dashboard.breakdowns}
+                projectMode={preference.projectMode}
+                viewerIsAdmin={false}
+              />
               <SessionsSection
                 sessions={dashboard.sessions}
                 timezone={preference.timezone}
+                projectMode={preference.projectMode}
+                viewerIsAdmin={false}
               />
             </>
           ) : (
