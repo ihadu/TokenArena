@@ -6,7 +6,7 @@ export function toProjectIdentity(input: {
   salt: string;
 }) {
   if (input.mode === "disabled") {
-    return { projectKey: "unknown", projectLabel: "Unknown Project" };
+    return { projectKey: "unknown", projectLabel: input.project };
   }
 
   if (input.mode === "raw") {
@@ -18,8 +18,5 @@ export function toProjectIdentity(input: {
     .digest("hex")
     .slice(0, 16);
 
-  return {
-    projectKey,
-    projectLabel: `Project ${projectKey.slice(0, 6)}`,
-  };
+  return { projectKey, projectLabel: input.project };
 }
