@@ -30,7 +30,8 @@ import {
   formatTokenCount,
   formatUsdAmount,
 } from "@/lib/usage/format";
-import type { UsageSessionRow } from "@/lib/usage/types";
+import { getProjectDisplayLabel } from "@/lib/usage/project-display";
+import type { ProjectMode, UsageSessionRow } from "@/lib/usage/types";
 import { CollapsibleSection } from "./collapsible-section";
 
 const PAGE_SIZE = 20;
@@ -70,12 +71,16 @@ type SessionsSectionProps = {
   sessions: UsageSessionRow[];
   timezone: string;
   defaultOpen?: boolean;
+  projectMode?: ProjectMode;
+  viewerIsAdmin?: boolean;
 };
 
 export function SessionsSection({
   sessions,
   timezone,
   defaultOpen = true,
+  projectMode = "hashed",
+  viewerIsAdmin = false,
 }: SessionsSectionProps) {
   const locale = useLocale();
   const t = useTranslations("usage.sessions");
@@ -136,100 +141,106 @@ export function SessionsSection({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pagedSessions.map((session) => (
-                  <TableRow key={session.id}>
-                    <TableCell className="align-top">
-                      <div className="font-medium">
-                        {formatDateTime(
-                          session.firstMessageAt,
-                          timezone,
-                          locale,
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="align-top font-medium">
-                      {session.source}
-                    </TableCell>
-                    <TableCell
-                      className="max-w-[200px] align-top"
-                      title={session.primaryModel}
-                    >
-                      <div className="truncate font-medium">
-                        {session.primaryModel}
-                      </div>
-                    </TableCell>
-                    <TableCell
-                      className="max-w-[220px] align-top"
-                      title={session.projectLabel}
-                    >
-                      <div className="truncate font-medium">
-                        {session.projectLabel}
-                      </div>
-                    </TableCell>
-                    <TableCell
-                      className="max-w-[200px] align-top"
-                      title={session.deviceLabel}
-                    >
-                      <div className="truncate">{session.deviceLabel}</div>
-                    </TableCell>
-                    <TableCell className="align-top text-right">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="cursor-help font-medium">
-                            {formatTokenCount(session.totalTokens, locale)}
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent align="end" side="left">
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                            <div className="text-muted-foreground">
-                              {t("table.input")}
+                {pagedSessions.map((session) => {
+                  const projectDisplay = getProjectDisplayLabel(
+                    { key: session.projectKey, name: session.projectLabel },
+                    { projectMode, viewerIsAdmin },
+                  );
+                  return (
+                    <TableRow key={session.id}>
+                      <TableCell className="align-top">
+                        <div className="font-medium">
+                          {formatDateTime(
+                            session.firstMessageAt,
+                            timezone,
+                            locale,
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="align-top font-medium">
+                        {session.source}
+                      </TableCell>
+                      <TableCell
+                        className="max-w-[200px] align-top"
+                        title={session.primaryModel}
+                      >
+                        <div className="truncate font-medium">
+                          {session.primaryModel}
+                        </div>
+                      </TableCell>
+                      <TableCell
+                        className="max-w-[220px] align-top"
+                        title={projectDisplay}
+                      >
+                        <div className="truncate font-medium">
+                          {projectDisplay}
+                        </div>
+                      </TableCell>
+                      <TableCell
+                        className="max-w-[200px] align-top"
+                        title={session.deviceLabel}
+                      >
+                        <div className="truncate">{session.deviceLabel}</div>
+                      </TableCell>
+                      <TableCell className="align-top text-right">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="cursor-help font-medium">
+                              {formatTokenCount(session.totalTokens, locale)}
                             </div>
-                            <div className="text-right font-medium">
-                              {formatTokenCount(session.inputTokens, locale)}
+                          </TooltipTrigger>
+                          <TooltipContent align="end" side="left">
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                              <div className="text-muted-foreground">
+                                {t("table.input")}
+                              </div>
+                              <div className="text-right font-medium">
+                                {formatTokenCount(session.inputTokens, locale)}
+                              </div>
+                              <div className="text-muted-foreground">
+                                {t("table.output")}
+                              </div>
+                              <div className="text-right font-medium">
+                                {formatTokenCount(session.outputTokens, locale)}
+                              </div>
+                              {session.reasoningTokens > 0 && (
+                                <>
+                                  <div className="text-muted-foreground">
+                                    {t("table.reasoning")}
+                                  </div>
+                                  <div className="text-right font-medium">
+                                    {formatTokenCount(
+                                      session.reasoningTokens,
+                                      locale,
+                                    )}
+                                  </div>
+                                </>
+                              )}
+                              {session.cachedTokens > 0 && (
+                                <>
+                                  <div className="text-muted-foreground">
+                                    {t("table.cache")}
+                                  </div>
+                                  <div className="text-right font-medium">
+                                    {formatTokenCount(
+                                      session.cachedTokens,
+                                      locale,
+                                    )}
+                                  </div>
+                                </>
+                              )}
                             </div>
-                            <div className="text-muted-foreground">
-                              {t("table.output")}
-                            </div>
-                            <div className="text-right font-medium">
-                              {formatTokenCount(session.outputTokens, locale)}
-                            </div>
-                            {session.reasoningTokens > 0 && (
-                              <>
-                                <div className="text-muted-foreground">
-                                  {t("table.reasoning")}
-                                </div>
-                                <div className="text-right font-medium">
-                                  {formatTokenCount(
-                                    session.reasoningTokens,
-                                    locale,
-                                  )}
-                                </div>
-                              </>
-                            )}
-                            {session.cachedTokens > 0 && (
-                              <>
-                                <div className="text-muted-foreground">
-                                  {t("table.cache")}
-                                </div>
-                                <div className="text-right font-medium">
-                                  {formatTokenCount(
-                                    session.cachedTokens,
-                                    locale,
-                                  )}
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell className="align-top text-right">
-                      {session.estimatedCostUsd != null
-                        ? formatUsdAmount(session.estimatedCostUsd, locale)
-                        : "—"}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell className="align-top text-right">
+                        {session.estimatedCostUsd != null
+                          ? formatUsdAmount(session.estimatedCostUsd, locale)
+                          : "—"}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>

@@ -72,6 +72,7 @@ describe("SessionsSection", () => {
           sessions={sessions}
           timezone="Asia/Shanghai"
           defaultOpen={false}
+          projectMode="raw"
         />
       </TooltipProvider>,
     );
@@ -85,7 +86,11 @@ describe("SessionsSection", () => {
   it("renders the session table by default", () => {
     const markup = renderToStaticMarkup(
       <TooltipProvider>
-        <SessionsSection sessions={sessions} timezone="Asia/Shanghai" />
+        <SessionsSection
+          sessions={sessions}
+          timezone="Asia/Shanghai"
+          projectMode="raw"
+        />
       </TooltipProvider>,
     );
 
