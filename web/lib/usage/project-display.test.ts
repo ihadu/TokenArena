@@ -48,12 +48,12 @@ describe("getProjectDisplayLabel", () => {
     ).toBe("my-project");
   });
 
-  it("handles unknown key gracefully in hashed mode", () => {
+  it("uses the truncated key prefix for hashed mode when key length is at least 6", () => {
     expect(
       getProjectDisplayLabel(
-        { key: "unknown", name: "my-project" },
+        { key: "abcdef0000000000", name: "my-project" },
         { projectMode: "hashed", viewerIsAdmin: false },
       ),
-    ).toBe("Project unknown");
+    ).toBe("Project abcdef");
   });
 });
