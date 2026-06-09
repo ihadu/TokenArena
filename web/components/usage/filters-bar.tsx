@@ -32,8 +32,10 @@ import {
 } from "@/components/ui/select";
 import { useRouter } from "@/i18n/navigation";
 import { formatDateInput } from "@/lib/usage/format";
+import { getProjectDisplayLabel } from "@/lib/usage/project-display";
 import type {
   DashboardPreset,
+  ProjectMode,
   UsageFilterOptions,
   UsageFilters,
 } from "@/lib/usage/types";
@@ -52,6 +54,7 @@ type FiltersBarProps = {
   lastSyncedText?: string;
   /** Rendered on the right side of the bar (e.g. share badges). */
   badgesSlot?: ReactNode;
+  projectMode?: ProjectMode;
 };
 
 const ALL_VALUE = "__all__";
@@ -134,6 +137,7 @@ function FiltersBarInner({
   options,
   lastSyncedText,
   badgesSlot,
+  projectMode = "hashed",
 }: FiltersBarProps) {
   const t = useTranslations("usage.filters");
   const { replace } = useRouter();
@@ -147,9 +151,24 @@ function FiltersBarInner({
     buildDateValue(range.to, range.timezone),
   );
 
+  const projectOptions = options.projects.map((option) => ({
+    value: option.value,
+    label: getProjectDisplayLabel(
+      { key: option.value, name: option.label },
+      { projectMode, viewerIsAdmin: false },
+    ),
+  }));
+  const displayOptions: UsageFilterOptions = useMemo(
+    () => ({
+      ...options,
+      projects: projectOptions,
+    }),
+    [options, projectOptions],
+  );
+
   const activeChips = useMemo(
-    () => getActiveFilterChips(filters, options),
-    [filters, options],
+    () => getActiveFilterChips(filters, displayOptions),
+    [filters, displayOptions],
   );
   const badgesSlotChildren = Children.toArray(badgesSlot);
   const updateParams = (updates: Record<string, string | null>) => {
@@ -216,28 +235,28 @@ function FiltersBarInner({
       label: t("devices"),
       icon: "device",
       placeholder: t("allDevices"),
-      options: options.devices,
+      options: displayOptions.devices,
     },
     {
       key: "source",
       label: t("tools"),
       icon: "tool",
       placeholder: t("allTools"),
-      options: options.sources,
+      options: displayOptions.sources,
     },
     {
       key: "model",
       label: t("models"),
       icon: "model",
       placeholder: t("allModels"),
-      options: options.models,
+      options: displayOptions.models,
     },
     {
       key: "projectKey",
       label: t("projects"),
       icon: "project",
       placeholder: t("allProjects"),
-      options: options.projects,
+      options: displayOptions.projects,
     },
   ];
 
