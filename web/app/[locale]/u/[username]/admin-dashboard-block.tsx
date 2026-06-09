@@ -53,10 +53,16 @@ export async function AdminDashboardBlock({
           pricingSummary={dashboard.pricingSummary}
           modelPricingRows={dashboard.modelPricingRows}
         />
-        <BreakdownGrid breakdowns={dashboard.breakdowns} />
+        <BreakdownGrid
+          breakdowns={dashboard.breakdowns}
+          viewerIsAdmin
+          projectMode={preference.projectMode}
+        />
         <SessionsSection
           sessions={dashboard.sessions}
           timezone={preference.timezone}
+          viewerIsAdmin
+          projectMode={preference.projectMode}
         />
       </CardContent>
     </Card>
