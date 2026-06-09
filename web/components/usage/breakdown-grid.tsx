@@ -8,7 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatTokenCount, formatUsdAmount } from "@/lib/usage/format";
 import { getProjectDisplayLabel } from "@/lib/usage/project-display";
-import type { BreakdownRow, ProjectMode, UsageBreakdowns } from "@/lib/usage/types";
+import type {
+  BreakdownRow,
+  ProjectMode,
+  UsageBreakdowns,
+} from "@/lib/usage/types";
 import { CollapsibleSection } from "./collapsible-section";
 
 const BreakdownChartInner = dynamic(
