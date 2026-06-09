@@ -107,6 +107,7 @@ describe("ensureUsagePreferenceWithDb", () => {
     expect(db.usagePreference.create).toHaveBeenCalledWith({
       data: {
         userId: "user_123",
+        timezone: "Asia/Shanghai",
         projectHashSalt: expect.any(String),
       },
     });

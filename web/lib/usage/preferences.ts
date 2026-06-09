@@ -37,6 +37,7 @@ export async function ensureUsagePreferenceWithDb(
     return await db.usagePreference.create({
       data: {
         userId,
+        timezone: "Asia/Shanghai",
         projectHashSalt: createProjectHashSalt(),
       },
     });

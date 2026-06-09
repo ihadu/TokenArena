@@ -141,7 +141,7 @@ model UsagePreference {
   userId               String      @unique
   locale               AppLocale   @default(en)
   theme                ThemeMode   @default(system)
-  timezone             String      @default("UTC")
+  timezone             String      @default("Asia/Shanghai")
   projectMode          ProjectMode @default(hashed)
   publicProfileEnabled Boolean     @default(true)
   bio                  String?
