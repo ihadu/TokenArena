@@ -1,30 +1,38 @@
 import "server-only";
 
 import { getTranslations } from "next-intl/server";
+import type { ReactNode } from "react";
 import type { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import { FiltersBar } from "@/components/usage/filters-bar";
 import { BreakdownGrid } from "@/components/usage/breakdown-grid";
 import { KpiGrid } from "@/components/usage/kpi-grid";
 import { SessionsSection } from "@/components/usage/sessions-section";
 import { UsageVisualizationCard } from "@/components/usage/usage-visualization-card";
 import type { dashboardQuerySchema } from "@/lib/usage/contracts";
 import { getUsageDashboardData } from "@/lib/usage/dashboard.server";
+import { getFilterOptions } from "@/lib/usage/queries";
 
 type Props = {
   locale: string;
   targetUserId: string;
   query: z.infer<typeof dashboardQuerySchema>;
+  basePath: string;
+  badgesSlot?: ReactNode;
 };
 
 export async function AdminDashboardBlock({
   locale,
   targetUserId,
   query,
+  basePath,
+  badgesSlot,
 }: Props) {
-  const [t, { dashboard, preference }] = await Promise.all([
+  const [t, { dashboard, preference }, options] = await Promise.all([
     getTranslations({ locale, namespace: "admin" }),
     getUsageDashboardData({ userId: targetUserId, query }),
+    getFilterOptions(targetUserId),
   ]);
 
   return (
@@ -44,6 +52,19 @@ export async function AdminDashboardBlock({
         <div className="text-xs text-muted-foreground">{t("notice")}</div>
       </header>
       <CardContent className="space-y-4 px-4 pb-4 pt-4">
+        <FiltersBar
+          preset={dashboard.range.preset}
+          range={{
+            from: dashboard.range.from.toISOString(),
+            to: dashboard.range.to.toISOString(),
+            timezone: dashboard.range.timezone,
+          }}
+          filters={dashboard.filters}
+          options={options}
+          projectMode={preference.projectMode}
+          basePath={basePath}
+          badgesSlot={badgesSlot}
+        />
         <UsageVisualizationCard
           trendData={dashboard.tokenTrend}
           heatmapData={dashboard.hourlyActivityHeatmap}

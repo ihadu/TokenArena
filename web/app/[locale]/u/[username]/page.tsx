@@ -450,6 +450,7 @@ export default async function PublicProfilePage({
           locale={locale}
           targetUserId={profile.id}
           query={adminQuery}
+          basePath={`/${locale}/u/${username}`}
         />
       ) : null}
     </SocialShell>

@@ -1,6 +1,7 @@
 export function buildUsageHref(
   currentSearch: string,
   updates: Record<string, string | null>,
+  basePath = "/usage",
 ) {
   const next = new URLSearchParams(currentSearch);
 
@@ -14,5 +15,5 @@ export function buildUsageHref(
 
   const query = next.toString();
 
-  return query ? `/usage?${query}` : "/usage";
+  return query ? `${basePath}?${query}` : basePath;
 }

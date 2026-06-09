@@ -55,6 +55,8 @@ type FiltersBarProps = {
   /** Rendered on the right side of the bar (e.g. share badges). */
   badgesSlot?: ReactNode;
   projectMode?: ProjectMode;
+  /** Base path for navigation hrefs. Defaults to /usage. */
+  basePath?: string;
 };
 
 const ALL_VALUE = "__all__";
@@ -138,6 +140,7 @@ function FiltersBarInner({
   lastSyncedText,
   badgesSlot,
   projectMode = "hashed",
+  basePath = "/usage",
 }: FiltersBarProps) {
   const t = useTranslations("usage.filters");
   const { replace } = useRouter();
@@ -172,7 +175,7 @@ function FiltersBarInner({
   );
   const badgesSlotChildren = Children.toArray(badgesSlot);
   const updateParams = (updates: Record<string, string | null>) => {
-    replace(buildUsageHref(searchParams.toString(), updates));
+    replace(buildUsageHref(searchParams.toString(), updates, basePath));
   };
 
   const setPreset = (nextPreset: DashboardPreset) => {
