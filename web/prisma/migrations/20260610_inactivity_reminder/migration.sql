@@ -20,4 +20,4 @@ CREATE INDEX "InactivityReminder_userId_resolvedAt_idx" ON "InactivityReminder"(
 CREATE INDEX "InactivityReminder_lastCheckAt_idx" ON "InactivityReminder"("lastCheckAt");
 
 -- AddForeignKey
-ALTER TABLE "InactivityReminder" ADD CONSTRAINT "InactivityReminder_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "InactivityReminder" ADD CONSTRAINT "InactivityReminder_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
