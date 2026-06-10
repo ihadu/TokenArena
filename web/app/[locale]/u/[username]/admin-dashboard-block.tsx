@@ -6,10 +6,15 @@ import type { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { FiltersBar } from "@/components/usage/filters-bar";
+import { AdminComparisonCard } from "@/components/usage/admin-comparison-card";
+import { AdminHabitsCard } from "@/components/usage/admin-habits-card";
+import { AdminInsightsCard } from "@/components/usage/admin-insights-card";
+import { AdminProjectDrilldownCard } from "@/components/usage/admin-project-drilldown-card";
 import { BreakdownGrid } from "@/components/usage/breakdown-grid";
 import { KpiGrid } from "@/components/usage/kpi-grid";
 import { SessionsSection } from "@/components/usage/sessions-section";
 import { UsageVisualizationCard } from "@/components/usage/usage-visualization-card";
+import { getAdminUsageAnalytics } from "@/lib/usage/admin-analytics.server";
 import type { dashboardQuerySchema } from "@/lib/usage/contracts";
 import { getUsageDashboardData } from "@/lib/usage/dashboard.server";
 import { getFilterOptions } from "@/lib/usage/queries";
@@ -29,10 +34,18 @@ export async function AdminDashboardBlock({
   basePath,
   badgesSlot,
 }: Props) {
-  const [t, { dashboard, preference }, options] = await Promise.all([
+  const { dashboard, preference } = await getUsageDashboardData({
+    userId: targetUserId,
+    query,
+  });
+  const [t, options, analytics] = await Promise.all([
     getTranslations({ locale, namespace: "admin" }),
-    getUsageDashboardData({ userId: targetUserId, query }),
     getFilterOptions(targetUserId),
+    getAdminUsageAnalytics({
+      userId: targetUserId,
+      range: dashboard.range,
+      timezone: dashboard.range.timezone,
+    }),
   ]);
 
   return (
@@ -73,6 +86,14 @@ export async function AdminDashboardBlock({
           overview={dashboard.overview}
           pricingSummary={dashboard.pricingSummary}
           modelPricingRows={dashboard.modelPricingRows}
+          locale={locale}
+          dailyAverages={{
+            tokens: analytics.dailyAverages.tokens,
+            cost: analytics.dailyAverages.cost,
+            sessions: analytics.dailyAverages.sessions,
+            activeSeconds: analytics.dailyAverages.activeSeconds,
+            activeDays: analytics.dailyAverages.activeDays,
+          }}
         />
         <BreakdownGrid
           breakdowns={dashboard.breakdowns}
@@ -85,6 +106,34 @@ export async function AdminDashboardBlock({
           viewerIsAdmin
           projectMode={preference.projectMode}
         />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <AdminHabitsCard
+            habits={{
+              hourHistogram: analytics.hourHistogram,
+              weekdayHistogram: analytics.weekdayHistogram,
+              currentStreak: analytics.habits.currentStreak,
+              longestStreak: analytics.habits.longestStreak,
+              deviceCount: analytics.habits.deviceCount,
+            }}
+          />
+          <AdminInsightsCard insights={analytics.insights} />
+        </div>
+        <AdminComparisonCard
+          user={{
+            tokens:
+              analytics.dailyAverages.tokens * analytics.dailyAverages.activeDays,
+            cost: analytics.dailyAverages.cost * analytics.dailyAverages.activeDays,
+            sessions:
+              analytics.dailyAverages.sessions *
+              analytics.dailyAverages.activeDays,
+            activeSeconds:
+              analytics.dailyAverages.activeSeconds *
+              analytics.dailyAverages.activeDays,
+          }}
+          vsPlatform={analytics.comparison.vsPlatform}
+          vsPrevPeriod={analytics.comparison.vsPrevPeriod}
+        />
+        <AdminProjectDrilldownCard projects={analytics.projectDrilldown} />
       </CardContent>
     </Card>
   );
