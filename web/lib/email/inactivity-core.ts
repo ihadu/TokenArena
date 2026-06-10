@@ -34,7 +34,12 @@ function formatYmd(p: { year: number; month: number; day: number }): string {
 
 function nextDay(d: Date, timezone: string): Date {
   const p = toZonedParts(d, timezone);
-  return new Date(Date.UTC(p.year, p.month - 1, p.day) + 24 * 60 * 60 * 1000);
+  // Use noon-based UTC arithmetic to avoid DST spring-forward midnight
+  // ambiguity: advancing 24h from a zoned midnight can land in the previous
+  // zoned day after a DST shift, causing an infinite loop.
+  const utcNoon = new Date(Date.UTC(p.year, p.month - 1, p.day, 12));
+  utcNoon.setUTCDate(utcNoon.getUTCDate() + 1);
+  return utcNoon;
 }
 
 function countInactiveBusinessDays(

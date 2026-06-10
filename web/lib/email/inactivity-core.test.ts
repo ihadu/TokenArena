@@ -81,4 +81,38 @@ describe("runInactivitySweep", () => {
     expect(result.failed).toBe(1);
     expect(result.sent).toBe(1);
   });
+
+  it("does not hang on DST spring-forward day for America/New_York", async () => {
+    vi.useFakeTimers();
+    // 2026-03-10 13:00 UTC = 09:00 EDT on 2026-03-10 in NY (DST started 2026-03-08)
+    vi.setSystemTime(new Date("2026-03-10T13:00:00Z"));
+    prismaMock.user.findMany.mockResolvedValue([
+      {
+        id: "u_dst",
+        email: "dst@x.com",
+        username: "dst_user",
+        usagePreference: { timezone: "America/New_York", locale: "en" },
+      },
+    ]);
+    // Last active: 2026-03-04 (5 calendar days before). Inactive biz days
+    // from 2026-03-05 through 2026-03-09 (exclusive of 03-10): Thu, Fri, Mon = 3.
+    prismaMock.usageBucket.findFirst.mockResolvedValueOnce({
+      bucketStart: new Date("2026-03-04T05:00:00Z"),
+    });
+    prismaMock.usageSession.findFirst.mockResolvedValueOnce(null);
+    prismaMock.inactivityReminder.findFirst.mockResolvedValueOnce(null);
+    prismaMock.inactivityReminder.create.mockResolvedValueOnce({ id: "r_dst" });
+    sendMock.mockResolvedValueOnce({});
+
+    // The original bug caused an infinite loop here. Vitest's per-test timeout
+    // (5s below) would fail the test if the loop never advanced.
+    const start = Date.now();
+    const result = await runInactivitySweep();
+    const elapsed = Date.now() - start;
+
+    expect(elapsed).toBeLessThan(1000);
+    expect(result.failed).toBe(0);
+    // 3 inactive biz days meets the >= 3 threshold and is the first send.
+    expect(result.sent).toBe(1);
+  }, 5000);
 });
