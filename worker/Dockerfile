@@ -17,6 +17,7 @@ WORKDIR /app
 
 RUN npm install -g pnpm@10.32.1
 
+# Copy installed deps and source
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/web/node_modules ./web/node_modules
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -27,15 +28,19 @@ ENV NODE_ENV=production
 ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 
 # Generate the Prisma client (writes to web/generated/prisma)
-RUN pnpm --filter @tokenarena/web exec prisma generate
+WORKDIR /app/web
+RUN pnpm exec prisma generate
+WORKDIR /app
 
-# Compile worker TypeScript
-RUN pnpm --filter @tokenarena/worker build
+# Compile worker TypeScript (devDeps were installed in deps stage)
+WORKDIR /app/worker
+RUN pnpm exec tsc
+WORKDIR /app
 
 FROM node:26-alpine AS runner
 WORKDIR /app
 
-# Copy production node_modules from deps (avoids second install / husky prepare)
+# Copy production node_modules from deps
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/web/node_modules ./web/node_modules
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
