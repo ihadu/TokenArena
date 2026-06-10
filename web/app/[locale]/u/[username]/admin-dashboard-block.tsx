@@ -5,12 +5,12 @@ import type { ReactNode } from "react";
 import type { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
-import { FiltersBar } from "@/components/usage/filters-bar";
 import { AdminComparisonCard } from "@/components/usage/admin-comparison-card";
 import { AdminHabitsCard } from "@/components/usage/admin-habits-card";
 import { AdminInsightsCard } from "@/components/usage/admin-insights-card";
 import { AdminProjectDrilldownCard } from "@/components/usage/admin-project-drilldown-card";
 import { BreakdownGrid } from "@/components/usage/breakdown-grid";
+import { FiltersBar } from "@/components/usage/filters-bar";
 import { KpiGrid } from "@/components/usage/kpi-grid";
 import { SessionsSection } from "@/components/usage/sessions-section";
 import { UsageVisualizationCard } from "@/components/usage/usage-visualization-card";
@@ -121,8 +121,10 @@ export async function AdminDashboardBlock({
         <AdminComparisonCard
           user={{
             tokens:
-              analytics.dailyAverages.tokens * analytics.dailyAverages.activeDays,
-            cost: analytics.dailyAverages.cost * analytics.dailyAverages.activeDays,
+              analytics.dailyAverages.tokens *
+              analytics.dailyAverages.activeDays,
+            cost:
+              analytics.dailyAverages.cost * analytics.dailyAverages.activeDays,
             sessions:
               analytics.dailyAverages.sessions *
               analytics.dailyAverages.activeDays,

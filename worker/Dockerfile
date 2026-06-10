@@ -1,4 +1,4 @@
-FROM node:20-alpine AS builder
+FROM node:26-alpine AS builder
 WORKDIR /app
 RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
@@ -11,7 +11,7 @@ RUN printf 'onlyBuiltDependencies[]=@parcel/watcher\nonlyBuiltDependencies[]=@pr
 RUN pnpm --filter @tokenarena/web exec prisma generate
 RUN pnpm --filter @tokenarena/worker build
 
-FROM node:20-alpine
+FROM node:26-alpine
 WORKDIR /app
 RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
@@ -22,4 +22,5 @@ COPY cli ./cli
 RUN printf 'onlyBuiltDependencies[]=@parcel/watcher\nonlyBuiltDependencies[]=@prisma/engines\nonlyBuiltDependencies[]=@swc/core\nonlyBuiltDependencies[]=esbuild\nonlyBuiltDependencies[]=msw\nonlyBuiltDependencies[]=prisma\nonlyBuiltDependencies[]=sharp\n' > .npmrc \
     && pnpm install --frozen-lockfile --prod
 COPY --from=builder /app/worker/dist ./worker/dist
+COPY --from=builder /app/web/generated ./web/generated
 CMD ["node", "worker/dist/index.js"]
