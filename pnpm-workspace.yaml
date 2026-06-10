@@ -1,6 +1,7 @@
 packages:
   - "cli"
   - "web"
+  - "worker"
 
 ignoredBuiltDependencies:
   - sharp

@@ -60,7 +60,7 @@ function countInactiveBusinessDays(
 
 export async function runInactivitySweep(now: Date = new Date()): Promise<SweepResult> {
   const users = await prisma.user.findMany({
-    where: { usagePreference: { is: { timezone: { not: null } } } },
+    where: { usagePreference: { isNot: null } },
     select: {
       id: true,
       email: true,

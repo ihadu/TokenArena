@@ -82,5 +82,11 @@
       "path": ".next/standalone/web/server.js",
       "limit": "500 kB"
     }
-  ]
+  ],
+  "exports": {
+    "./lib/email/inactivity-core": {
+      "types": "./lib/email/inactivity-core.ts",
+      "default": "./lib/email/inactivity-core.ts"
+    }
+  }
 }
