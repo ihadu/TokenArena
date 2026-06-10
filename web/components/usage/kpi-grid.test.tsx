@@ -134,4 +134,65 @@ describe("KpiGrid", () => {
     expect(markup).not.toContain(">Reasoning Tokens</h3>");
     expect(markup).not.toContain("<sup");
   });
+
+  it("renders daily-avg sub-cards when dailyAverages prop is provided", async () => {
+    const markup = renderToStaticMarkup(
+      await KpiGrid({
+        overview: {
+          totalTokens: {
+            current: 100,
+            previous: 0,
+            delta: 100,
+          },
+          inputTokens: { current: 50, previous: 0, delta: 50 },
+          outputTokens: { current: 50, previous: 0, delta: 50 },
+          reasoningTokens: { current: 0, previous: 0, delta: 0 },
+          cachedTokens: { current: 0, previous: 0, delta: 0 },
+          activeSeconds: { current: 60, previous: 0, delta: 60 },
+          totalSeconds: { current: 60, previous: 0, delta: 60 },
+          sessions: { current: 2, previous: 0, delta: 2 },
+          messages: { current: 2, previous: 0, delta: 2 },
+          userMessages: { current: 1, previous: 0, delta: 1 },
+        },
+        locale: "en",
+        dailyAverages: {
+          tokens: 100,
+          cost: 0.5,
+          sessions: 2,
+          activeSeconds: 60,
+          activeDays: 5,
+        },
+      }),
+    );
+
+    expect(markup).toContain('data-slot="daily-averages"');
+    expect(markup).toContain("日均 tokens");
+    expect(markup).toContain("日均 cost");
+    expect(markup).toContain("日均 sessions");
+    expect(markup).toContain("日均 active");
+    expect(markup).toContain(">2.0</div>");
+    expect(markup).toContain(">1m</div>");
+  });
+
+  it("omits daily-avg sub-cards when dailyAverages prop is not provided", async () => {
+    const markup = renderToStaticMarkup(
+      await KpiGrid({
+        overview: {
+          totalTokens: { current: 0, previous: 0, delta: 0 },
+          inputTokens: { current: 0, previous: 0, delta: 0 },
+          outputTokens: { current: 0, previous: 0, delta: 0 },
+          reasoningTokens: { current: 0, previous: 0, delta: 0 },
+          cachedTokens: { current: 0, previous: 0, delta: 0 },
+          activeSeconds: { current: 0, previous: 0, delta: 0 },
+          totalSeconds: { current: 0, previous: 0, delta: 0 },
+          sessions: { current: 0, previous: 0, delta: 0 },
+          messages: { current: 0, previous: 0, delta: 0 },
+          userMessages: { current: 0, previous: 0, delta: 0 },
+        },
+      }),
+    );
+
+    expect(markup).not.toContain('data-slot="daily-averages"');
+    expect(markup).not.toContain("日均");
+  });
 });

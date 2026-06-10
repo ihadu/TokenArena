@@ -1,6 +1,11 @@
 import { getTranslations } from "next-intl/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  formatDuration,
+  formatTokenCount,
+  formatUsdAmount,
+} from "@/lib/usage/format";
+import {
   formatKpiDelta,
   formatKpiMetricValue,
   type KpiMetricKind,
@@ -15,10 +20,20 @@ import { AnimatedKpiDelta, AnimatedKpiValue } from "./kpi-animated-metric";
 import { MetricDefinitionPopover } from "./metric-definition-popover";
 import { PricingMatchDialog } from "./pricing-match-dialog";
 
+type DailyAverages = {
+  tokens: number;
+  cost: number;
+  sessions: number;
+  activeSeconds: number;
+  activeDays: number;
+};
+
 type KpiGridProps = {
   overview: UsageOverviewMetrics;
   pricingSummary?: UsagePricingSummary;
   modelPricingRows?: ModelPricingRow[];
+  locale?: string;
+  dailyAverages?: DailyAverages;
 };
 
 type SingleKpiConfig = {
@@ -202,117 +217,152 @@ export async function KpiGrid({
   overview,
   pricingSummary,
   modelPricingRows = EMPTY_MODEL_PRICING_ROWS,
+  locale = "en",
+  dailyAverages,
 }: KpiGridProps) {
   const t = await getTranslations("usage.kpis");
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-      {kpis.map((kpi) => {
-        if (kpi.type === "combined") {
-          const primaryMetric = getMetricSnapshot(
-            kpi.primary.key,
-            overview,
-            pricingSummary,
-          );
-          const secondaryMetric = getMetricSnapshot(
-            kpi.secondary.key,
-            overview,
-            pricingSummary,
-          );
-          const combinedMetric = sumMetricSnapshots(
-            primaryMetric,
-            secondaryMetric,
-          );
-          const primaryDeltaDescription = t("deltaVsPrevious", {
-            delta: formatKpiDelta(combinedMetric.delta, kpi.primary.kind),
-            previous: formatKpiMetricValue(
-              combinedMetric.previous,
-              kpi.primary.kind,
-            ),
+    <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        {kpis.map((kpi) => {
+          if (kpi.type === "combined") {
+            const primaryMetric = getMetricSnapshot(
+              kpi.primary.key,
+              overview,
+              pricingSummary,
+            );
+            const secondaryMetric = getMetricSnapshot(
+              kpi.secondary.key,
+              overview,
+              pricingSummary,
+            );
+            const combinedMetric = sumMetricSnapshots(
+              primaryMetric,
+              secondaryMetric,
+            );
+            const primaryDeltaDescription = t("deltaVsPrevious", {
+              delta: formatKpiDelta(combinedMetric.delta, kpi.primary.kind),
+              previous: formatKpiMetricValue(
+                combinedMetric.previous,
+                kpi.primary.kind,
+              ),
+            });
+
+            return (
+              <Card key={kpi.labelKey} size="sm">
+                <CardHeader>
+                  <div className="flex items-center justify-between gap-2">
+                    <CardTitle>{t(kpi.labelKey)}</CardTitle>
+                    <DeltaBadge
+                      metric={combinedMetric}
+                      kind={kpi.primary.kind}
+                      title={primaryDeltaDescription}
+                    />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
+                    <div className="text-2xl font-semibold tracking-tight">
+                      <AnimatedKpiValue
+                        kind={kpi.primary.kind}
+                        to={combinedMetric.current}
+                      />
+                    </div>
+                    <div className="inline-flex flex-wrap items-baseline gap-x-1 pb-1 text-xs text-muted-foreground">
+                      <AnimatedKpiValue
+                        kind={kpi.secondary.kind}
+                        to={secondaryMetric.current}
+                      />
+                      <span>{t("reasoningSuffix")}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          }
+
+          const metric = getMetricSnapshot(kpi.key, overview, pricingSummary);
+          const previousValue = formatKpiMetricValue(metric.previous, kpi.kind);
+          const deltaDescription = t("deltaVsPrevious", {
+            delta: formatKpiDelta(metric.delta, kpi.kind),
+            previous: previousValue,
           });
+          const isEstimatedCostCard = kpi.key === "estimatedCostUsd";
+          const definitionKey =
+            kpi.key === "activeSeconds"
+              ? "activeTime"
+              : kpi.key === "totalSeconds"
+                ? "totalTime"
+                : null;
 
           return (
-            <Card key={kpi.labelKey} size="sm">
+            <Card key={kpi.key} size="sm">
               <CardHeader>
                 <div className="flex items-center justify-between gap-2">
-                  <CardTitle>{t(kpi.labelKey)}</CardTitle>
+                  <div className="flex items-center gap-1.5">
+                    <CardTitle>{t(kpi.labelKey)}</CardTitle>
+                    {definitionKey ? (
+                      <MetricDefinitionPopover
+                        ariaLabel={t(`definitions.${definitionKey}.open`)}
+                        title={t(`definitions.${definitionKey}.title`)}
+                        paragraphs={[
+                          t(`definitions.${definitionKey}.summary`),
+                          t(`definitions.${definitionKey}.details`),
+                        ]}
+                      />
+                    ) : null}
+                    {isEstimatedCostCard ? (
+                      <PricingMatchDialog rows={modelPricingRows} />
+                    ) : null}
+                  </div>
                   <DeltaBadge
-                    metric={combinedMetric}
-                    kind={kpi.primary.kind}
-                    title={primaryDeltaDescription}
+                    metric={metric}
+                    kind={kpi.kind}
+                    title={deltaDescription}
                   />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
-                  <div className="text-2xl font-semibold tracking-tight">
-                    <AnimatedKpiValue
-                      kind={kpi.primary.kind}
-                      to={combinedMetric.current}
-                    />
-                  </div>
-                  <div className="inline-flex flex-wrap items-baseline gap-x-1 pb-1 text-xs text-muted-foreground">
-                    <AnimatedKpiValue
-                      kind={kpi.secondary.kind}
-                      to={secondaryMetric.current}
-                    />
-                    <span>{t("reasoningSuffix")}</span>
-                  </div>
+                <div className="text-2xl font-semibold tracking-tight">
+                  <AnimatedKpiValue kind={kpi.kind} to={metric.current} />
                 </div>
               </CardContent>
             </Card>
           );
-        }
-
-        const metric = getMetricSnapshot(kpi.key, overview, pricingSummary);
-        const previousValue = formatKpiMetricValue(metric.previous, kpi.kind);
-        const deltaDescription = t("deltaVsPrevious", {
-          delta: formatKpiDelta(metric.delta, kpi.kind),
-          previous: previousValue,
-        });
-        const isEstimatedCostCard = kpi.key === "estimatedCostUsd";
-        const definitionKey =
-          kpi.key === "activeSeconds"
-            ? "activeTime"
-            : kpi.key === "totalSeconds"
-              ? "totalTime"
-              : null;
-
-        return (
-          <Card key={kpi.key} size="sm">
-            <CardHeader>
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5">
-                  <CardTitle>{t(kpi.labelKey)}</CardTitle>
-                  {definitionKey ? (
-                    <MetricDefinitionPopover
-                      ariaLabel={t(`definitions.${definitionKey}.open`)}
-                      title={t(`definitions.${definitionKey}.title`)}
-                      paragraphs={[
-                        t(`definitions.${definitionKey}.summary`),
-                        t(`definitions.${definitionKey}.details`),
-                      ]}
-                    />
-                  ) : null}
-                  {isEstimatedCostCard ? (
-                    <PricingMatchDialog rows={modelPricingRows} />
-                  ) : null}
-                </div>
-                <DeltaBadge
-                  metric={metric}
-                  kind={kpi.kind}
-                  title={deltaDescription}
-                />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-semibold tracking-tight">
-                <AnimatedKpiValue kind={kpi.kind} to={metric.current} />
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+        })}
+      </div>
+      {dailyAverages ? (
+        <div
+          data-slot="daily-averages"
+          className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+        >
+          <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+            <div className="text-xs text-muted-foreground">日均 tokens</div>
+            <div className="text-lg font-semibold tabular-nums">
+              {formatTokenCount(dailyAverages.tokens, locale)}
+            </div>
+          </div>
+          <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+            <div className="text-xs text-muted-foreground">日均 cost</div>
+            <div className="text-lg font-semibold tabular-nums">
+              {formatUsdAmount(dailyAverages.cost, locale)}
+            </div>
+          </div>
+          <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+            <div className="text-xs text-muted-foreground">日均 sessions</div>
+            <div className="text-lg font-semibold tabular-nums">
+              {dailyAverages.sessions.toFixed(1)}
+            </div>
+          </div>
+          <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+            <div className="text-xs text-muted-foreground">日均 active</div>
+            <div className="text-lg font-semibold tabular-nums">
+              {formatDuration(dailyAverages.activeSeconds)}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
