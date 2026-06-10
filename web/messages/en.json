@@ -1038,6 +1038,27 @@
   "admin": {
     "badge": "ADMIN",
     "dashboardTitle": "Full usage dashboard",
-    "notice": "This view is private data, not visible to the user. Access is logged."
+    "notice": "This view is private data, not visible to the user. Access is logged.",
+    "habits": "Habits",
+    "comparison": "Comparison",
+    "insights": "Insights",
+    "projects": "Projects",
+    "currentStreak": "Current streak",
+    "longestStreak": "Longest streak",
+    "deviceCount": "Devices",
+    "dailyAvgTokens": "Avg daily tokens",
+    "dailyAvgCost": "Avg daily cost",
+    "dailyAvgSessions": "Avg daily sessions",
+    "dailyAvgActive": "Avg daily active",
+    "noInsights": "All clear"
+  },
+  "email": {
+    "inactivity": {
+      "subject": "Token Arena misses you",
+      "title": "We haven't seen your data in a while",
+      "body": "It's been {inactiveDays} business days since your last upload.",
+      "cta": "Upload your data →",
+      "footer": "If you're on a break, feel free to ignore this."
+    }
   }
 }

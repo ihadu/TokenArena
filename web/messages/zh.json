@@ -1038,6 +1038,27 @@
   "admin": {
     "badge": "管理员",
     "dashboardTitle": "完整用量仪表盘",
-    "notice": "此视图为私密数据，对方不可见。访问已记录。"
+    "notice": "此视图为私密数据，对方不可见。访问已记录。",
+    "habits": "使用习惯",
+    "comparison": "对比",
+    "insights": "洞察",
+    "projects": "项目分布",
+    "currentStreak": "当前 streak",
+    "longestStreak": "最长 streak",
+    "deviceCount": "设备数",
+    "dailyAvgTokens": "日均 tokens",
+    "dailyAvgCost": "日均 cost",
+    "dailyAvgSessions": "日均 sessions",
+    "dailyAvgActive": "日均 active",
+    "noInsights": "无异常"
+  },
+  "email": {
+    "inactivity": {
+      "subject": "Token Arena 想你了",
+      "title": "好久没看到你的数据了",
+      "body": "已经 {inactiveDays} 个工作日没收到你的上传数据。",
+      "cta": "立刻上传数据 →",
+      "footer": "如果你最近在休息或出门，这封邮件可以忽略。"
+    }
   }
 }
