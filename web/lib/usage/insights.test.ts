@@ -41,7 +41,7 @@ describe("detectInsights", () => {
     expect(r.some((i) => i.kind === "costSpike")).toBe(false);
   });
 
-  it("emits costSpike when sample >= 7 and outlier > mean + 3σ", () => {
+  it("emits costSpike when sample >= 7 and max > 2x mean", () => {
     const r = detectInsights({
       ...base,
       dailyCosts: [3, 3, 3, 3, 3, 3, 3, 100],
