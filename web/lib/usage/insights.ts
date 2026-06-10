@@ -8,7 +8,12 @@ export type AdminAnalyticsFixture = {
   };
   habits: { currentStreak: number; longestStreak: number; deviceCount: number };
   comparison: {
-    vsPrevPeriod: { tokens: number; cost: number; sessions: number; activeSeconds: number };
+    vsPrevPeriod: {
+      tokens: number;
+      cost: number;
+      sessions: number;
+      activeSeconds: number;
+    };
   };
   dailyCosts: number[];
   projectShareShift: number;
@@ -19,7 +24,13 @@ export type AdminAnalyticsFixture = {
 
 export type Insight = {
   id: string;
-  kind: "streak" | "inactive" | "costSpike" | "projectShift" | "modelShift" | "deviceGrowth";
+  kind:
+    | "streak"
+    | "inactive"
+    | "costSpike"
+    | "projectShift"
+    | "modelShift"
+    | "deviceGrowth";
   severity: "info" | "warn" | "critical";
   title: string;
   body: string;
@@ -93,7 +104,8 @@ export function detectInsights(a: AdminAnalyticsFixture): Insight[] {
   }
 
   if (a.habits.deviceCount >= 4 && a.deviceCountPrev > 0) {
-    const growth = (a.habits.deviceCount - a.deviceCountPrev) / a.deviceCountPrev;
+    const growth =
+      (a.habits.deviceCount - a.deviceCountPrev) / a.deviceCountPrev;
     if (growth >= 0.5) {
       out.push({
         id: "deviceGrowth",

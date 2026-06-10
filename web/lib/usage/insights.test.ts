@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import { detectInsights, type AdminAnalyticsFixture } from "./insights";
 
 const base: AdminAnalyticsFixture = {
-  dailyAverages: { activeDays: 7, tokens: 1000, cost: 5, sessions: 3, activeSeconds: 600 },
+  dailyAverages: {
+    activeDays: 7,
+    tokens: 1000,
+    cost: 5,
+    sessions: 3,
+    activeSeconds: 600,
+  },
   habits: { currentStreak: 0, longestStreak: 5, deviceCount: 2 },
   comparison: {
     vsPrevPeriod: { tokens: 1000, cost: 5, sessions: 3, activeSeconds: 600 },
@@ -20,7 +26,10 @@ describe("detectInsights", () => {
   });
 
   it("emits streakRule when currentStreak >= 7", () => {
-    const r = detectInsights({ ...base, habits: { ...base.habits, currentStreak: 10 } });
+    const r = detectInsights({
+      ...base,
+      habits: { ...base.habits, currentStreak: 10 },
+    });
     expect(r.some((i) => i.kind === "streak")).toBe(true);
   });
 
@@ -55,7 +64,11 @@ describe("detectInsights", () => {
   });
 
   it("emits modelShift when top model changes", () => {
-    const r = detectInsights({ ...base, topModel: "claude-3", topModelPrev: "gpt-4" });
+    const r = detectInsights({
+      ...base,
+      topModel: "claude-3",
+      topModelPrev: "gpt-4",
+    });
     expect(r.some((i) => i.kind === "modelShift")).toBe(true);
   });
 

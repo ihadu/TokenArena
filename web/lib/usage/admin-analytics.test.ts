@@ -4,7 +4,7 @@ const { prismaMock, arenaMock } = vi.hoisted(() => ({
   prismaMock: {
     usageBucket: { findMany: vi.fn(), findFirst: vi.fn() },
     usageSession: { findMany: vi.fn() },
-    usageDevice: { count: vi.fn() },
+    device: { count: vi.fn() },
   },
   arenaMock: vi.fn(),
 }));
@@ -108,7 +108,8 @@ describe("getAdminUsageAnalytics", () => {
         projectLabel: "P2",
       },
     ]);
-    prismaMock.usageDevice.count.mockResolvedValueOnce(2);
+    prismaMock.device.count.mockResolvedValueOnce(2); // current
+    prismaMock.device.count.mockResolvedValueOnce(1); // prev
     arenaMock.mockResolvedValueOnce({
       totalTokens: 50000,
       totalEstimatedCostUsd: 200,

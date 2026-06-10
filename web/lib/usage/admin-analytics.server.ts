@@ -41,69 +41,79 @@ export async function getAdminUsageAnalytics(input: {
 }): Promise<AdminAnalytics> {
   const prev = getPreviousRange(input.range);
 
-  const [buckets, sessionsPrev, bucketsPrev, platform, devicesCount] =
-    await Promise.all([
-      prisma.usageBucket.findMany({
-        where: {
-          userId: input.userId,
-          bucketStart: { gte: input.range.from, lte: input.range.to },
-        },
-        select: {
-          bucketStart: true,
-          totalTokens: true,
-          source: true,
-          model: true,
-          projectKey: true,
-          projectLabel: true,
-        },
-      }),
-      prisma.usageSession.findMany({
-        where: {
-          userId: input.userId,
-          firstMessageAt: { gte: input.range.from, lte: input.range.to },
-        },
-        select: {
-          firstMessageAt: true,
-          activeSeconds: true,
-          projectKey: true,
-          projectLabel: true,
-        },
-      }),
-      prisma.usageBucket.findMany({
-        where: {
-          userId: input.userId,
-          bucketStart: { gte: prev.from, lte: prev.to },
-        },
-        select: {
-          bucketStart: true,
-          totalTokens: true,
-          model: true,
-          projectKey: true,
-          projectLabel: true,
-        },
-      }),
-      getAchievementArenaSummary(input.userId),
-      prisma.usageDevice.count({ where: { userId: input.userId } }),
-    ]);
+  const [
+    buckets,
+    sessions,
+    bucketsPrev,
+    platform,
+    devicesCount,
+    devicesCountPrev,
+  ] = await Promise.all([
+    prisma.usageBucket.findMany({
+      where: {
+        userId: input.userId,
+        bucketStart: { gte: input.range.from, lte: input.range.to },
+      },
+      select: {
+        bucketStart: true,
+        totalTokens: true,
+        source: true,
+        model: true,
+        projectKey: true,
+        projectLabel: true,
+      },
+    }),
+    prisma.usageSession.findMany({
+      where: {
+        userId: input.userId,
+        firstMessageAt: { gte: input.range.from, lte: input.range.to },
+      },
+      select: {
+        firstMessageAt: true,
+        activeSeconds: true,
+        projectKey: true,
+        projectLabel: true,
+      },
+    }),
+    prisma.usageBucket.findMany({
+      where: {
+        userId: input.userId,
+        bucketStart: { gte: prev.from, lte: prev.to },
+      },
+      select: {
+        bucketStart: true,
+        totalTokens: true,
+        model: true,
+        projectKey: true,
+        projectLabel: true,
+      },
+    }),
+    getAchievementArenaSummary(input.userId),
+    prisma.device.count({ where: { userId: input.userId } }),
+    prisma.device.count({
+      where: {
+        userId: input.userId,
+        lastSeenAt: { gte: prev.from, lte: prev.to },
+      },
+    }),
+  ]);
 
   // 日均：分母 = 活跃天数
   const activeDays = new Set(
     buckets.map((b) => formatDateInput(b.bucketStart, input.timezone)),
   ).size;
   const totalTokens = buckets.reduce((s, b) => s + Number(b.totalTokens), 0);
-  const totalSessions = sessionsPrev.length;
-  const totalActiveSeconds = sessionsPrev.reduce(
-    (s, x) => s + x.activeSeconds,
-    0,
-  );
+  const totalSessions = sessions.length;
+  const totalActiveSeconds = sessions.reduce((s, x) => s + x.activeSeconds, 0);
   const totalCost = 0;
 
-  const dailyCosts = aggregateDailyCost(buckets);
+  // 成本数据未在此聚合；待接入价格目录后再生成 dailyCosts
+  const dailyCosts: number[] = [];
 
   // 习惯
   const hourHistogram = new Array(24).fill(0);
   const weekdayHistogram = new Array(7).fill(0);
-  for (const s of sessionsPrev) {
+  for (const s of sessions) {
     const p = getZonedWeekdayHour(s.firstMessageAt, input.timezone);
     hourHistogram[p.hour] += 1;
     weekdayHistogram[p.weekday] += 1;
@@ -139,7 +149,7 @@ export async function getAdminUsageAnalytics(input: {
     );
     byProject.set(b.projectKey, entry);
   }
-  for (const s of sessionsPrev) {
+  for (const s of sessions) {
     if (!s.projectKey) continue;
     const entry = byProject.get(s.projectKey);
     if (entry) entry.sessions += 1;
@@ -185,7 +195,7 @@ export async function getAdminUsageAnalytics(input: {
     projectShareShift: computeTopProjectShift(buckets, bucketsPrev),
     topModel: mostCommonModel(buckets),
     topModelPrev: mostCommonModel(bucketsPrev),
-    deviceCountPrev: devicesCount,
+    deviceCountPrev: devicesCountPrev,
   };
 
   const insights = detectInsights(fixture);
@@ -206,15 +216,6 @@ export async function getAdminUsageAnalytics(input: {
     hourHistogram,
     weekdayHistogram,
   };
-}
-
-function aggregateDailyCost(buckets: Array<{ bucketStart: Date }>): number[] {
-  const map = new Map<string, number>();
-  for (const b of buckets) {
-    const k = b.bucketStart.toISOString().slice(0, 10);
-    map.set(k, (map.get(k) ?? 0) + 1);
-  }
-  return Array.from(map.values());
 }
 
 function computeStreaks(activeDates: Set<string>): {
@@ -238,7 +239,21 @@ function computeStreaks(activeDates: Set<string>): {
       run = 1;
     }
   }
-  return { currentStreak: 0, longestStreak: longest };
+  // 当前连击：从最近一天向前回溯，统计连续天数
+  let current = 1;
+  for (let i = sorted.length - 1; i > 0; i--) {
+    const newerStr = sorted[i];
+    const olderStr = sorted[i - 1];
+    if (!newerStr || !olderStr) break;
+    const newer = new Date(newerStr);
+    const older = new Date(olderStr);
+    if (newer.getTime() - older.getTime() === 86400000) {
+      current++;
+    } else {
+      break;
+    }
+  }
+  return { currentStreak: current, longestStreak: longest };
 }
 
 function mostCommonModel(
