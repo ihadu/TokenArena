@@ -79,6 +79,7 @@ model User {
   achievementAwards          AchievementAward[]
   achievements               UserAchievement[]
   leaderboardPeriodEntries   LeaderboardPeriodEntry[]
+  inactivityReminders        InactivityReminder[]
   followers                  Follow[]                   @relation("FollowFollowing")
   following                  Follow[]                   @relation("FollowFollower")
   adminAccessLogsAsViewer    AdminAccessLog[]           @relation("AdminAccessLogViewer")
@@ -398,4 +399,20 @@ model AdminAccessLog {
   @@index([targetUserId, createdAt])
   @@index([viewerId, createdAt])
   @@map("admin_access_log")
+}
+
+model InactivityReminder {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstSentAt DateTime
+  lastSentAt  DateTime
+  sendCount   Int       @default(1)
+  lastCheckAt DateTime
+  resolvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId, resolvedAt])
+  @@index([lastCheckAt])
 }
