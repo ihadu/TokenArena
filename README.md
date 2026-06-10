@@ -190,6 +190,18 @@ git add --renormalize .
 
 `GITLAB_BASE_URL` 可指向 `https://gitlab.com` 或你的自建 GitLab；GitLab OAuth 回调地址为 `/api/auth/oauth2/callback/gitlab`。
 
+## Inactivity Email Reminders
+
+`docker-compose` 中的 `worker` 服务会按分钟级 cron 扫描用户活跃度，对连续 3 个及以上工作日（中国法定节假日 + 周末除外）未同步数据、未在 Web 上活跃的账户发送邮件提醒。配置 SMTP 即可启用：
+
+- `SMTP_HOST` — SMTP 服务器地址
+- `SMTP_PORT` — `465`（隐式 TLS）或 `587`（STARTTLS）
+- `SMTP_SECURE` — 留空则根据端口自动判断；可显式设置为 `true` / `false` 覆盖
+- `SMTP_USER` / `SMTP_PASSWORD` — SMTP 凭据
+- `SMTP_FROM` — 发件人地址
+
+提醒节奏：首次提醒发出后，每 7 天再发一次；用户再次上传数据即可视为恢复活跃，下一次扫描会自动结算 `InactivityReminder` 记录，不再发信。`SMTP_HOST` 留空时 `worker` 会跳过 `runInactivitySweep`，不会发送任何邮件。
+
 ## 技术栈
 
 | 层 | 技术 |
