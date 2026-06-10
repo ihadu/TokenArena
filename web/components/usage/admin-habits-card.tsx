@@ -56,7 +56,7 @@ export function AdminHabitsCard({ habits }: Props) {
               <div key={i} className="flex-1 flex flex-col items-center gap-1">
                 <div
                   className="w-full bg-amber-500/60"
-                  style={{ height: `${(habits.weekdayHistogram[i] ?? 0 / maxWeekday) * 100}%` }}
+                  style={{ height: `${((habits.weekdayHistogram[i] ?? 0) / maxWeekday) * 100}%` }}
                 />
                 <div className="text-[10px] text-muted-foreground">{label}</div>
               </div>
