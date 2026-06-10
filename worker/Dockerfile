@@ -9,7 +9,7 @@ COPY worker ./worker
 COPY web ./web
 
 RUN printf 'onlyBuiltDependencies[]=@parcel/watcher\nonlyBuiltDependencies[]=@prisma/engines\nonlyBuiltDependencies[]=@swc/core\nonlyBuiltDependencies[]=esbuild\nonlyBuiltDependencies[]=msw\nonlyBuiltDependencies[]=prisma\nonlyBuiltDependencies[]=sharp\n' > .npmrc \
-    && pnpm install --frozen-lockfile
+    && pnpm install --frozen-lockfile --ignore-scripts
 RUN pnpm --filter @tokenarena/web exec prisma generate
 RUN pnpm --filter @tokenarena/worker build
 
@@ -24,7 +24,7 @@ COPY worker ./worker
 COPY web ./web
 
 RUN printf 'onlyBuiltDependencies[]=@parcel/watcher\nonlyBuiltDependencies[]=@prisma/engines\nonlyBuiltDependencies[]=@swc/core\nonlyBuiltDependencies[]=esbuild\nonlyBuiltDependencies[]=msw\nonlyBuiltDependencies[]=prisma\nonlyBuiltDependencies[]=sharp\n' > .npmrc \
-    && pnpm install --frozen-lockfile --prod
+    && pnpm install --frozen-lockfile --prod --ignore-scripts
 COPY --from=builder /app/worker/dist ./worker/dist
 COPY --from=builder /app/web/generated ./web/generated
 CMD ["node", "worker/dist/index.js"]
