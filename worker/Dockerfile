@@ -17,9 +17,10 @@ WORKDIR /app
 
 RUN npm install -g pnpm@10.32.1
 
-# Copy installed deps and source
+# Copy installed deps for both web and worker
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/web/node_modules ./web/node_modules
+COPY --from=deps /app/worker/node_modules ./worker/node_modules
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY web ./web
 COPY worker ./worker
@@ -32,7 +33,7 @@ WORKDIR /app/web
 RUN pnpm exec prisma generate
 WORKDIR /app
 
-# Compile worker TypeScript (devDeps were installed in deps stage)
+# Compile worker TypeScript
 WORKDIR /app/worker
 RUN pnpm exec tsc
 WORKDIR /app
@@ -43,6 +44,7 @@ WORKDIR /app
 # Copy production node_modules from deps
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/web/node_modules ./web/node_modules
+COPY --from=deps /app/worker/node_modules ./worker/node_modules
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY web/package.json ./web/
 COPY web ./web
