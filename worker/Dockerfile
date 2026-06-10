@@ -33,9 +33,9 @@ WORKDIR /app/web
 RUN pnpm exec prisma generate
 WORKDIR /app
 
-# Compile worker TypeScript
+# Bundle worker with esbuild (handles web's TS + `@/*` path alias imports)
 WORKDIR /app/worker
-RUN pnpm exec tsc
+RUN pnpm build
 WORKDIR /app
 
 FROM node:26-alpine AS runner
