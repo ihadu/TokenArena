@@ -71,11 +71,15 @@ describe("runInactivitySweep", () => {
     prismaMock.usageSession.findFirst.mockResolvedValueOnce(null);
     prismaMock.inactivityReminder.findFirst.mockResolvedValueOnce(null);
     // u2: 4 business days inactive
-    prismaMock.usageBucket.findFirst.mockResolvedValueOnce({ bucketStart: new Date("2026-06-04T00:00:00Z") });
+    prismaMock.usageBucket.findFirst.mockResolvedValueOnce({
+      bucketStart: new Date("2026-06-04T00:00:00Z"),
+    });
     prismaMock.inactivityReminder.findFirst.mockResolvedValueOnce(null);
     prismaMock.inactivityReminder.create.mockResolvedValueOnce({ id: "r1" });
 
-    sendMock.mockRejectedValueOnce(new Error("SMTP down")).mockResolvedValueOnce({});
+    sendMock
+      .mockRejectedValueOnce(new Error("SMTP down"))
+      .mockResolvedValueOnce({});
 
     const result = await runInactivitySweep();
     expect(result.failed).toBe(1);

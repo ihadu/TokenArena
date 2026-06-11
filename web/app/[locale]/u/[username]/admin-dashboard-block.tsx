@@ -108,6 +108,7 @@ export async function AdminDashboardBlock({
         />
         <div className="grid gap-4 lg:grid-cols-2">
           <AdminHabitsCard
+            t={t}
             habits={{
               hourHistogram: analytics.hourHistogram,
               weekdayHistogram: analytics.weekdayHistogram,
@@ -116,9 +117,11 @@ export async function AdminDashboardBlock({
               deviceCount: analytics.habits.deviceCount,
             }}
           />
-          <AdminInsightsCard insights={analytics.insights} />
+          <AdminInsightsCard t={t} insights={analytics.insights} />
         </div>
         <AdminComparisonCard
+          t={t}
+          locale={locale}
           user={{
             tokens:
               analytics.dailyAverages.tokens *

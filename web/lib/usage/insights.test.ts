@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { detectInsights, type AdminAnalyticsFixture } from "./insights";
+import { type AdminAnalyticsFixture, detectInsights } from "./insights";
 
 const base: AdminAnalyticsFixture = {
   dailyAverages: {

@@ -1,9 +1,14 @@
-import { toZonedParts } from "@/lib/usage/date-range";
-import { prisma } from "@/lib/prisma";
 import { isNonWorkingDay } from "@/lib/holidays/cn";
+import { prisma } from "@/lib/prisma";
+import { toZonedParts } from "@/lib/usage/date-range";
 import { sendInactivityReminder } from "./smtp";
 
-export type SweepResult = { sent: number; skipped: number; resolved: number; failed: number };
+export type SweepResult = {
+  sent: number;
+  skipped: number;
+  resolved: number;
+  failed: number;
+};
 
 async function getLastActiveDay(
   userId: string,
@@ -47,7 +52,8 @@ function countInactiveBusinessDays(
   now: Date,
   timezone: string,
 ): number {
-  const start = lastActive ?? new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+  const start =
+    lastActive ?? new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
   let cursor = nextDay(start, timezone);
   const nowYmd = formatYmd(toZonedParts(now, timezone));
   let count = 0;
@@ -58,7 +64,9 @@ function countInactiveBusinessDays(
   return count;
 }
 
-export async function runInactivitySweep(now: Date = new Date()): Promise<SweepResult> {
+export async function runInactivitySweep(
+  now: Date = new Date(),
+): Promise<SweepResult> {
   const users = await prisma.user.findMany({
     where: { usagePreference: { isNot: null } },
     select: {
@@ -102,7 +110,8 @@ export async function runInactivitySweep(now: Date = new Date()): Promise<SweepR
       const isFirst = !existing;
       const isWeeklyDue =
         existing &&
-        now.getTime() - existing.lastSentAt.getTime() >= 7 * 24 * 60 * 60 * 1000;
+        now.getTime() - existing.lastSentAt.getTime() >=
+          7 * 24 * 60 * 60 * 1000;
 
       if (!isFirst && !isWeeklyDue) {
         result.skipped++;
@@ -118,7 +127,11 @@ export async function runInactivitySweep(now: Date = new Date()): Promise<SweepR
       if (existing) {
         await prisma.inactivityReminder.update({
           where: { id: existing.id },
-          data: { lastSentAt: now, sendCount: existing.sendCount + 1, updatedAt: now },
+          data: {
+            lastSentAt: now,
+            sendCount: existing.sendCount + 1,
+            updatedAt: now,
+          },
         });
       } else {
         await prisma.inactivityReminder.create({

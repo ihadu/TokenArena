@@ -2,7 +2,15 @@ import { AlertTriangle, CheckCircle2, Info, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Insight } from "@/lib/usage/insights";
 
-type Props = { insights: Insight[] };
+type Translator = (
+  key: string,
+  values?: Record<string, string | number>,
+) => string;
+
+type Props = {
+  t: Translator;
+  insights: Insight[];
+};
 
 const iconMap = {
   info: Info,
@@ -16,16 +24,17 @@ const colorMap = {
   critical: "text-rose-600",
 } as const;
 
-export function AdminInsightsCard({ insights }: Props) {
+export function AdminInsightsCard({ t, insights }: Props) {
   return (
     <Card className="bg-card shadow-sm ring-1 ring-border/60">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">洞察</CardTitle>
+        <CardTitle className="text-base">{t("insights")}</CardTitle>
       </CardHeader>
       <CardContent>
         {insights.length === 0 ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <CheckCircle2 className="size-4" /> 无异常
+            <CheckCircle2 className="size-4" />
+            {t("noInsights")}
           </div>
         ) : (
           <ul className="space-y-2">

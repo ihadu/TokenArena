@@ -4,6 +4,14 @@ import nodemailer, { type Transporter } from "nodemailer";
 
 let cachedTransport: Transporter | null = null;
 
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return value;
+}
+
 function resolveSmtpConfig() {
   const port = Number(process.env.SMTP_PORT ?? 465);
   const secure =
@@ -11,10 +19,10 @@ function resolveSmtpConfig() {
       ? process.env.SMTP_SECURE === "true"
       : port === 465;
   return {
-    host: process.env.SMTP_HOST!,
+    host: requireEnv("SMTP_HOST"),
     port,
     secure,
-    auth: { user: process.env.SMTP_USER!, pass: process.env.SMTP_PASSWORD! },
+    auth: { user: requireEnv("SMTP_USER"), pass: requireEnv("SMTP_PASSWORD") },
   };
 }
 
@@ -31,7 +39,7 @@ export async function sendInactivityReminder(opts: {
   html: string;
 }) {
   return getSmtpTransport().sendMail({
-    from: process.env.SMTP_FROM!,
+    from: requireEnv("SMTP_FROM"),
     to: opts.to,
     subject: opts.subject,
     html: opts.html,

@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronRight } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -23,15 +24,17 @@ type Props = { projects: ProjectRow[] };
 
 export function AdminProjectDrilldownCard({ projects }: Props) {
   const [openKey, setOpenKey] = useState<string | null>(null);
+  const t = useTranslations("admin");
+  const locale = useLocale();
 
   if (projects.length === 0) {
     return (
       <Card className="bg-card shadow-sm ring-1 ring-border/60">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">项目分布</CardTitle>
+          <CardTitle className="text-base">{t("projects")}</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
-          无项目数据
+          {t("noProjects")}
         </CardContent>
       </Card>
     );
@@ -40,7 +43,7 @@ export function AdminProjectDrilldownCard({ projects }: Props) {
   return (
     <Card className="bg-card shadow-sm ring-1 ring-border/60">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">项目分布</CardTitle>
+        <CardTitle className="text-base">{t("projects")}</CardTitle>
       </CardHeader>
       <CardContent>
         <ul className="divide-y divide-border/50">
@@ -58,22 +61,26 @@ export function AdminProjectDrilldownCard({ projects }: Props) {
                   <span className="font-medium truncate">{p.projectLabel}</span>
                 </div>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground tabular-nums">
-                  <span>{p.sessions} 会话</span>
-                  <span>{p.activeDays} 天</span>
+                  <span>
+                    {p.sessions.toLocaleString(locale)} {t("sessions")}
+                  </span>
+                  <span>
+                    {p.activeDays.toLocaleString(locale)} {t("daysShort")}
+                  </span>
                   <span className="font-semibold text-foreground">
-                    {formatTokenCount(p.totalTokens)}
+                    {formatTokenCount(p.totalTokens, locale)}
                   </span>
                 </div>
               </CollapsibleTrigger>
               <CollapsibleContent className="pb-3 px-6 text-sm space-y-1">
                 <div className="text-xs text-muted-foreground mb-1">
-                  Top 模型
+                  {t("topModels")}
                 </div>
                 {p.topModels.map((m) => (
                   <div key={m.model} className="flex justify-between">
                     <span className="text-muted-foreground">{m.model}</span>
                     <span className="tabular-nums">
-                      {formatTokenCount(m.totalTokens)}
+                      {formatTokenCount(m.totalTokens, locale)}
                     </span>
                   </div>
                 ))}
