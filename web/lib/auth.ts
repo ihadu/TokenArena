@@ -29,9 +29,33 @@ function getRequiredEnv(
   return value;
 }
 
+function parseTrustedOrigins(): string[] {
+  const raw = process.env.BETTER_AUTH_TRUSTED_ORIGINS;
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
+}
+
+function resolveTrustedOrigins(): string[] {
+  const baseURL = process.env.BETTER_AUTH_URL;
+  const fromEnv = parseTrustedOrigins();
+  const builtIn = [
+    baseURL,
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    process.env.BETTER_AUTH_LAN_ORIGIN,
+  ];
+  return [...builtIn, ...fromEnv].filter(
+    (o): o is string => typeof o === "string" && o.length > 0,
+  );
+}
+
 export const auth = betterAuth({
   baseURL: getRequiredEnv("BETTER_AUTH_URL"),
   secret: getRequiredEnv("BETTER_AUTH_SECRET"),
+  trustedOrigins: resolveTrustedOrigins(),
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
