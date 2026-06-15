@@ -15,7 +15,11 @@ export default defineConfig({
       DATABASE_URL: "postgresql://test:test@localhost:5432/tokenarena_test",
     },
     environment: "node",
-    include: ["lib/**/*.test.{ts,tsx}", "components/**/*.test.{ts,tsx}"],
+    include: [
+      "lib/**/*.test.{ts,tsx}",
+      "components/**/*.test.{ts,tsx}",
+      "app/**/*.test.{ts,tsx}",
+    ],
     passWithNoTests: true,
     coverage: {
       reporter: ["text", "json-summary", "lcov"],
