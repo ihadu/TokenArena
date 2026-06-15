@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { isCurrentUserAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { getOptionalSession } from "@/lib/session";
 import { resolveIsoWeek } from "@/lib/usage/weekly-export";
 
 const DEFAULT_TIMEZONE = "UTC";
@@ -26,9 +27,19 @@ export default async function AdminConsolePage({ params }: PageProps) {
     notFound();
   }
 
+  const session = await getOptionalSession();
+  const adminPref = session
+    ? await prisma.usagePreference.findUnique({
+        where: { userId: session.user.id },
+        select: { timezone: true },
+      })
+    : null;
+  const tz = adminPref?.timezone ?? DEFAULT_TIMEZONE;
+
   const t = await getTranslations("admin.weeklyExport");
-  const week = resolveIsoWeek(new Date(), DEFAULT_TIMEZONE);
+  const week = resolveIsoWeek(new Date(), tz);
   const memberCount = await prisma.user.count();
+  const downloadHref = `/api/admin/weekly-export?tz=${encodeURIComponent(tz)}`;
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-6">
@@ -41,14 +52,14 @@ export default async function AdminConsolePage({ params }: PageProps) {
         <CardHeader>
           <CardTitle>{t("isoWeekLabel", { label: week.label })}</CardTitle>
           <CardDescription>
-            {t("timezoneLabel", { tz: DEFAULT_TIMEZONE })}
+            {t("timezoneLabel", { tz })}
             {" · "}
             {t("memberCount", { count: memberCount })}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <a
-            href="/api/admin/weekly-export"
+            href={downloadHref}
             download
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { isCurrentUserAdmin, logAdminAccess } from "@/lib/admin";
+import { isCurrentUserAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { getOptionalSession } from "@/lib/session";
 import {
@@ -55,7 +55,7 @@ function fetchSessions(from: Date, to: Date) {
   });
 }
 
-export async function GET(_request: Request) {
+export async function GET(request: Request) {
   const session = await getOptionalSession();
   if (!session) {
     return jsonError("UNAUTHORIZED", 401);
@@ -70,7 +70,19 @@ export async function GET(_request: Request) {
     return jsonError("RATE_LIMITED", 429);
   }
 
-  const week = resolveIsoWeek(new Date(), DEFAULT_TIMEZONE);
+  const url = new URL(request.url);
+  const tzParam = url.searchParams.get("tz");
+  let tz = DEFAULT_TIMEZONE;
+  if (tzParam) {
+    tz = tzParam; // trusted: only the admin's own UI emits this
+  } else {
+    const adminPref = await prisma.usagePreference.findUnique({
+      where: { userId: session.user.id },
+      select: { timezone: true },
+    });
+    tz = adminPref?.timezone ?? DEFAULT_TIMEZONE;
+  }
+  const week = resolveIsoWeek(new Date(), tz);
 
   let users: Awaited<ReturnType<typeof fetchUsers>>;
   let buckets: Awaited<ReturnType<typeof fetchBuckets>>;
@@ -112,14 +124,6 @@ export async function GET(_request: Request) {
 
   const csv = buildCsv(rows);
   const filename = `tokenarena-weekly-${week.label}.csv`;
-
-  logAdminAccess({
-    viewerId: session.user.id,
-    targetUserId: session.user.id,
-    action: "weekly_export",
-  }).catch((err) =>
-    console.error("[admin/weekly-export] logAdminAccess failed", err),
-  );
 
   return new Response(csv, {
     status: 200,

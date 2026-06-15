@@ -4,12 +4,18 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     user: { count: vi.fn().mockResolvedValue(42) },
+    usagePreference: { findUnique: vi.fn().mockResolvedValue(null) },
   },
 }));
 
 vi.mock("@/lib/admin", () => ({
   isCurrentUserAdmin: vi.fn(),
-  logAdminAccess: vi.fn(),
+}));
+
+vi.mock("@/lib/session", () => ({
+  getOptionalSession: vi.fn().mockResolvedValue({
+    user: { id: "admin-1", username: "admin" },
+  }),
 }));
 
 vi.mock("next-intl/server", () => ({
@@ -55,8 +61,9 @@ describe("/[locale]/admin page", () => {
     const html = renderToStaticMarkup(element);
     expect(html).toContain("管理员控制台");
     expect(html).toContain("导出本周 CSV");
-    expect(html).toContain('href="/api/admin/weekly-export"');
+    expect(html).toContain('href="/api/admin/weekly-export?tz=UTC"');
     expect(html).toMatch(/本周 ISO 周：\d{4}-W\d{2}/);
+    expect(html).toContain("管理员时区：UTC");
   });
 
   it("calls notFound() when user is not admin", async () => {

@@ -6,7 +6,6 @@ vi.mock("@/lib/session", () => ({
 
 vi.mock("@/lib/admin", () => ({
   isCurrentUserAdmin: vi.fn(),
-  logAdminAccess: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -14,6 +13,7 @@ vi.mock("@/lib/prisma", () => ({
     user: { findMany: vi.fn() },
     usageBucket: { findMany: vi.fn() },
     usageSession: { findMany: vi.fn() },
+    usagePreference: { findUnique: vi.fn() },
   },
 }));
 
@@ -23,7 +23,7 @@ vi.mock("@/lib/usage/weekly-export-rate-limit", () => ({
   RATE_LIMIT_MS: 30_000,
 }));
 
-import { isCurrentUserAdmin, logAdminAccess } from "@/lib/admin";
+import { isCurrentUserAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { getOptionalSession } from "@/lib/session";
 import { checkAndRecord } from "@/lib/usage/weekly-export-rate-limit";
@@ -42,6 +42,12 @@ const mockSession = (username: string | null) => {
 
 const mockIsAdmin = (v: boolean) => {
   vi.mocked(isCurrentUserAdmin).mockResolvedValue(v);
+};
+
+const mockAdminPref = (timezone: string | null) => {
+  vi.mocked(prisma.usagePreference.findUnique).mockResolvedValue(
+    timezone ? ({ timezone } as never) : null,
+  );
 };
 
 const mockPrisma = (
@@ -89,6 +95,7 @@ describe("GET /api/admin/weekly-export", () => {
   it("returns 429 when rate-limited", async () => {
     mockSession("admin");
     mockIsAdmin(true);
+    mockAdminPref("Asia/Shanghai");
     vi.mocked(checkAndRecord).mockReturnValue(false);
     const res = await GET(
       new Request("http://localhost/api/admin/weekly-export"),
@@ -101,6 +108,7 @@ describe("GET /api/admin/weekly-export", () => {
   it("returns CSV with BOM and proper headers on success", async () => {
     mockSession("admin");
     mockIsAdmin(true);
+    mockAdminPref("Asia/Shanghai");
     mockPrisma([sampleUser], [], []);
 
     const res = await GET(
@@ -122,17 +130,29 @@ describe("GET /api/admin/weekly-export", () => {
     expect(body.startsWith("username,email,timezone,")).toBe(true);
     expect(body).toContain("alice,alice@example.com,Asia/Shanghai");
     expect(body).toMatch(/,0,0,0,0,0,0,0,0,,\n$/);
+  });
 
-    expect(logAdminAccess).toHaveBeenCalledWith({
-      viewerId: "u1",
-      targetUserId: "u1",
-      action: "weekly_export",
+  it("falls back to UTC when admin has no usagePreference", async () => {
+    mockSession("admin");
+    mockIsAdmin(true);
+    mockAdminPref(null);
+    mockPrisma([sampleUser], [], []);
+
+    const res = await GET(
+      new Request("http://localhost/api/admin/weekly-export"),
+    );
+
+    expect(res.status).toBe(200);
+    expect(prisma.usagePreference.findUnique).toHaveBeenCalledWith({
+      where: { userId: "u1" },
+      select: { timezone: true },
     });
   });
 
   it("returns 500 when prisma throws", async () => {
     mockSession("admin");
     mockIsAdmin(true);
+    mockAdminPref("Asia/Shanghai");
     vi.mocked(prisma.user.findMany).mockRejectedValue(new Error("db down"));
     const res = await GET(
       new Request("http://localhost/api/admin/weekly-export"),
