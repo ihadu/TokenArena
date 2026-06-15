@@ -1077,7 +1077,16 @@
     "sessions": "sessions",
     "days": "days",
     "daysShort": "d",
-    "topModels": "Top models"
+    "topModels": "Top models",
+    "weeklyExport": {
+      "title": "Admin Console",
+      "subtitle": "Weekly Usage Export",
+      "isoWeekLabel": "This ISO week: {label}",
+      "timezoneLabel": "Admin timezone: {tz}",
+      "memberCount": "Member count: {count}",
+      "downloadButton": "Export this week CSV",
+      "downloadHint": "Includes zero-usage members; save directly in browser"
+    }
   },
   "email": {
     "inactivity": {

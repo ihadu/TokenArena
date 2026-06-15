@@ -1077,7 +1077,16 @@
     "sessions": "会话",
     "days": "天",
     "daysShort": "天",
-    "topModels": "Top 模型"
+    "topModels": "Top 模型",
+    "weeklyExport": {
+      "title": "管理员控制台",
+      "subtitle": "周度用量导出",
+      "isoWeekLabel": "本周 ISO 周：{label}",
+      "timezoneLabel": "管理员时区：{tz}",
+      "memberCount": "成员数：{count}",
+      "downloadButton": "导出本周 CSV",
+      "downloadHint": "包含 0 用量用户；浏览器直接保存文件"
+    }
   },
   "email": {
     "inactivity": {
