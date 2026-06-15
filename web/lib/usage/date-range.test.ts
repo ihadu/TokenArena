@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  addToParts,
   getPreviousRange,
   groupByHourOrDay,
   listRangeBuckets,
   resolveDashboardRange,
   toZonedParts,
+  zonedDateTimeToUtc,
 } from "./date-range";
 
 describe("resolveDashboardRange", () => {
@@ -165,5 +167,56 @@ describe("toZonedParts", () => {
 
     expect(parts.hour).toBe(16);
     expect(parts.day).toBe(26);
+  });
+});
+
+describe("zonedDateTimeToUtc", () => {
+  it("converts zoned local time to UTC for Asia/Shanghai", () => {
+    // 2026-06-15 00:00:00 Asia/Shanghai == 2026-06-14 16:00:00 UTC
+    const result = zonedDateTimeToUtc(
+      { year: 2026, month: 6, day: 15, hour: 0, minute: 0, second: 0 },
+      "Asia/Shanghai",
+    );
+    expect(result.toISOString()).toBe("2026-06-14T16:00:00.000Z");
+  });
+
+  it("converts zoned local time to UTC for UTC", () => {
+    const result = zonedDateTimeToUtc(
+      { year: 2026, month: 6, day: 15, hour: 0, minute: 0, second: 0 },
+      "UTC",
+    );
+    expect(result.toISOString()).toBe("2026-06-15T00:00:00.000Z");
+  });
+});
+
+describe("addToParts", () => {
+  it("adds days", () => {
+    const result = addToParts(
+      { year: 2026, month: 6, day: 15, hour: 0, minute: 0, second: 0 },
+      { days: 7 },
+    );
+    expect(result).toEqual({
+      year: 2026,
+      month: 6,
+      day: 22,
+      hour: 0,
+      minute: 0,
+      second: 0,
+    });
+  });
+
+  it("rolls over month boundary", () => {
+    const result = addToParts(
+      { year: 2026, month: 6, day: 30, hour: 0, minute: 0, second: 0 },
+      { days: 3 },
+    );
+    expect(result).toEqual({
+      year: 2026,
+      month: 7,
+      day: 3,
+      hour: 0,
+      minute: 0,
+      second: 0,
+    });
   });
 });

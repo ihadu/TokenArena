@@ -89,7 +89,7 @@ function getTimezoneOffsetMs(date: Date, timezone: string) {
   return asUtc - date.getTime();
 }
 
-function zonedDateTimeToUtc(parts: ZonedDateParts, timezone: string) {
+export function zonedDateTimeToUtc(parts: ZonedDateParts, timezone: string) {
   let utcMs = Date.UTC(
     parts.year,
     parts.month - 1,
@@ -121,7 +121,7 @@ function zonedDateTimeToUtc(parts: ZonedDateParts, timezone: string) {
   return new Date(utcMs);
 }
 
-function addToParts(
+export function addToParts(
   parts: ZonedDateParts,
   input: { days?: number; hours?: number },
 ): ZonedDateParts {
