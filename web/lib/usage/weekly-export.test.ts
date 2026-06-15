@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { buildCsv, csvEscape, type WeeklyExportRow } from "./weekly-export";
+import {
+  buildCsv,
+  csvEscape,
+  resolveIsoWeek,
+  type WeeklyExportRow,
+} from "./weekly-export";
 
 describe("csvEscape", () => {
   it("returns plain text unchanged", () => {
@@ -113,5 +118,45 @@ describe("buildCsv", () => {
     expect(lines).toHaveLength(2);
     expect(lines[0].split(",")).toHaveLength(13);
     expect(lines[1]).toBe("");
+  });
+});
+
+describe("resolveIsoWeek", () => {
+  it("returns Monday 00:00 in Asia/Shanghai for a Monday Shanghai instant", () => {
+    // 2026-06-15 12:00 Asia/Shanghai == 2026-06-15 04:00 UTC
+    const now = new Date("2026-06-15T04:00:00.000Z");
+    const result = resolveIsoWeek(now, "Asia/Shanghai");
+    expect(result.fromIso).toBe("2026-06-15");
+    expect(result.toIso).toBe("2026-06-22");
+    expect(result.from.toISOString()).toBe("2026-06-14T16:00:00.000Z");
+    expect(result.to.toISOString()).toBe("2026-06-21T16:00:00.000Z");
+    expect(result.label).toBe("2026-W25");
+  });
+
+  it("handles UTC timezone", () => {
+    // 2026-06-15 Monday 00:00 UTC
+    const now = new Date("2026-06-15T00:00:00.000Z");
+    const result = resolveIsoWeek(now, "UTC");
+    expect(result.fromIso).toBe("2026-06-15");
+    expect(result.toIso).toBe("2026-06-22");
+    expect(result.from.toISOString()).toBe("2026-06-15T00:00:00.000Z");
+  });
+
+  it("rolls back to previous week for a Sunday Shanghai instant", () => {
+    // 2026-06-14 23:00 Shanghai (Sun) == 2026-06-14 15:00 UTC
+    const now = new Date("2026-06-14T15:00:00.000Z");
+    const result = resolveIsoWeek(now, "Asia/Shanghai");
+    expect(result.fromIso).toBe("2026-06-08");
+    expect(result.toIso).toBe("2026-06-15");
+    expect(result.label).toBe("2026-W24");
+  });
+
+  it("handles negative UTC offset (Los Angeles)", () => {
+    // 2026-06-15 Monday 02:00 LA (UTC-7) == 2026-06-15 09:00 UTC
+    const now = new Date("2026-06-15T09:00:00.000Z");
+    const result = resolveIsoWeek(now, "America/Los_Angeles");
+    expect(result.fromIso).toBe("2026-06-15");
+    expect(result.toIso).toBe("2026-06-22");
+    expect(result.from.toISOString()).toBe("2026-06-15T07:00:00.000Z");
   });
 });

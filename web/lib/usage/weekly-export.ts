@@ -1,3 +1,5 @@
+import { addToParts, toZonedParts, zonedDateTimeToUtc } from "./date-range";
+
 export type WeeklyExportRow = {
   username: string;
   email: string;
@@ -12,6 +14,14 @@ export type WeeklyExportRow = {
   sessionCount: number;
   firstActiveAt: Date | null;
   lastActiveAt: Date | null;
+};
+
+export type IsoWeek = {
+  from: Date; // 本周一 00:00:00 UTC
+  to: Date; // 下周一 00:00:00 UTC (开区间)
+  label: string; // "2026-W25"
+  fromIso: string; // tz 下的 "YYYY-MM-DD"
+  toIso: string; // tz 下的 "YYYY-MM-DD"
 };
 
 const HEADER = [
@@ -74,4 +84,64 @@ export function buildCsv(rows: WeeklyExportRow[]): string {
     );
   }
   return `${BOM}${lines.join("\n")}\n`;
+}
+
+function isoDateInTz(date: Date, timezone: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+function isoWeekParts(
+  y: number,
+  m: number,
+  d: number,
+): {
+  year: number;
+  week: number;
+} {
+  // ISO 8601: weeks start Monday; week 1 is the week containing Jan 4.
+  const date = new Date(Date.UTC(y, m - 1, d));
+  // ISO weekday: Mon=1, ..., Sun=7
+  const dayNum = ((date.getUTCDay() + 6) % 7) + 1;
+  // Move to the Thursday of this ISO week
+  const thursday = new Date(
+    date.getTime() + (4 - dayNum) * 24 * 60 * 60 * 1000,
+  );
+  const isoYear = thursday.getUTCFullYear();
+  const jan1 = new Date(Date.UTC(isoYear, 0, 1));
+  const week =
+    Math.floor(
+      (thursday.getTime() - jan1.getTime()) / (7 * 24 * 60 * 60 * 1000),
+    ) + 1;
+  return { year: isoYear, week };
+}
+
+function isoWeekLabel(monday: Date, timezone: string): string {
+  const z = toZonedParts(monday, timezone);
+  const { year, week } = isoWeekParts(z.year, z.month, z.day);
+  return `${year}-W${String(week).padStart(2, "0")}`;
+}
+
+export function resolveIsoWeek(now: Date, timezone: string): IsoWeek {
+  const z = toZonedParts(now, timezone);
+  const todayUtc = new Date(Date.UTC(z.year, z.month - 1, z.day));
+  const utcDow = todayUtc.getUTCDay();
+  const dowIso = (utcDow + 6) % 7; // Mon=0, ..., Sun=6
+  const mondayYmd = addToParts(
+    { year: z.year, month: z.month, day: z.day, hour: 0, minute: 0, second: 0 },
+    { days: -dowIso },
+  );
+  const fromUtc = zonedDateTimeToUtc(mondayYmd, timezone);
+  const toUtc = new Date(fromUtc.getTime() + 7 * 24 * 60 * 60 * 1000);
+  return {
+    from: fromUtc,
+    to: toUtc,
+    label: isoWeekLabel(fromUtc, timezone),
+    fromIso: isoDateInTz(fromUtc, timezone),
+    toIso: isoDateInTz(toUtc, timezone),
+  };
 }
