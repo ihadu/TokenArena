@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  aggregateWeeklyUsage,
   buildCsv,
   csvEscape,
   resolveIsoWeek,
+  type WeeklyExportInput,
   type WeeklyExportRow,
 } from "./weekly-export";
 
@@ -158,5 +160,184 @@ describe("resolveIsoWeek", () => {
     expect(result.fromIso).toBe("2026-06-15");
     expect(result.toIso).toBe("2026-06-22");
     expect(result.from.toISOString()).toBe("2026-06-15T07:00:00.000Z");
+  });
+});
+
+const baseUsers: WeeklyExportInput["users"] = [
+  { id: "u1", username: "alice", email: "a@b.com", timezone: "Asia/Shanghai" },
+  { id: "u2", username: "bob", email: "b@b.com", timezone: "UTC" },
+];
+
+describe("aggregateWeeklyUsage", () => {
+  it("emits zero rows for users with no usage", () => {
+    const rows = aggregateWeeklyUsage({
+      users: baseUsers,
+      buckets: [],
+      sessions: [],
+    });
+    expect(rows).toHaveLength(2);
+    for (const r of rows) {
+      expect(r.inputTokens).toBe(0n);
+      expect(r.totalTokens).toBe(0n);
+      expect(r.estimatedCostUsd).toBe(0);
+      expect(r.activeDays).toBe(0);
+      expect(r.sessionCount).toBe(0);
+      expect(r.firstActiveAt).toBeNull();
+      expect(r.lastActiveAt).toBeNull();
+    }
+  });
+
+  it("aggregates token sums per user", () => {
+    const rows = aggregateWeeklyUsage({
+      users: baseUsers,
+      buckets: [
+        {
+          userId: "u1",
+          inputTokens: 100n,
+          outputTokens: 200n,
+          reasoningTokens: 0n,
+          cachedTokens: 50n,
+          totalTokens: 350n,
+          estimatedCostUsd: 0.01,
+          bucketStart: new Date("2026-06-15T01:00:00Z"),
+        },
+        {
+          userId: "u1",
+          inputTokens: 10n,
+          outputTokens: 20n,
+          reasoningTokens: 0n,
+          cachedTokens: 5n,
+          totalTokens: 35n,
+          estimatedCostUsd: 0.001,
+          bucketStart: new Date("2026-06-16T01:00:00Z"),
+        },
+        {
+          userId: "u2",
+          inputTokens: 7n,
+          outputTokens: 8n,
+          reasoningTokens: 0n,
+          cachedTokens: 0n,
+          totalTokens: 15n,
+          estimatedCostUsd: null,
+          bucketStart: new Date("2026-06-17T01:00:00Z"),
+        },
+      ],
+      sessions: [],
+    });
+    const alice = rows.find((r) => r.username === "alice");
+    expect(alice).toBeDefined();
+    expect(alice?.inputTokens).toBe(110n);
+    expect(alice?.outputTokens).toBe(220n);
+    expect(alice?.totalTokens).toBe(385n);
+    expect(alice?.estimatedCostUsd).toBeCloseTo(0.011, 6);
+    expect(alice?.activeDays).toBe(2);
+
+    const bob = rows.find((r) => r.username === "bob");
+    expect(bob).toBeDefined();
+    expect(bob?.totalTokens).toBe(15n);
+    expect(bob?.estimatedCostUsd).toBe(0); // null coalesces to 0
+  });
+
+  it("counts distinct YYYY-MM-DD for activeDays in user timezone", () => {
+    const rows = aggregateWeeklyUsage({
+      users: [
+        {
+          id: "u1",
+          username: "a",
+          email: "a@b.com",
+          timezone: "Asia/Shanghai",
+        },
+      ],
+      buckets: [
+        {
+          userId: "u1",
+          inputTokens: 1n,
+          outputTokens: 0n,
+          reasoningTokens: 0n,
+          cachedTokens: 0n,
+          totalTokens: 1n,
+          estimatedCostUsd: 0,
+          bucketStart: new Date("2026-06-15T01:00:00Z"), // 2026-06-15 Shanghai
+        },
+        {
+          userId: "u1",
+          inputTokens: 1n,
+          outputTokens: 0n,
+          reasoningTokens: 0n,
+          cachedTokens: 0n,
+          totalTokens: 1n,
+          estimatedCostUsd: 0,
+          bucketStart: new Date("2026-06-15T13:00:00Z"), // 2026-06-15 Shanghai (same day)
+        },
+        {
+          userId: "u1",
+          inputTokens: 1n,
+          outputTokens: 0n,
+          reasoningTokens: 0n,
+          cachedTokens: 0n,
+          totalTokens: 1n,
+          estimatedCostUsd: 0,
+          bucketStart: new Date("2026-06-15T17:00:00Z"), // 2026-06-16 Shanghai (next day)
+        },
+      ],
+      sessions: [],
+    });
+    expect(rows[0].activeDays).toBe(2);
+  });
+
+  it("aggregates session count and first/last active timestamps", () => {
+    const rows = aggregateWeeklyUsage({
+      users: baseUsers,
+      buckets: [],
+      sessions: [
+        {
+          userId: "u1",
+          firstMessageAt: new Date("2026-06-15T01:00:00Z"),
+          lastMessageAt: new Date("2026-06-15T02:00:00Z"),
+        },
+        {
+          userId: "u1",
+          firstMessageAt: new Date("2026-06-19T10:00:00Z"),
+          lastMessageAt: new Date("2026-06-19T11:00:00Z"),
+        },
+        {
+          userId: "u2",
+          firstMessageAt: new Date("2026-06-16T03:00:00Z"),
+          lastMessageAt: new Date("2026-06-16T03:30:00Z"),
+        },
+      ],
+    });
+    const alice = rows.find((r) => r.username === "alice");
+    expect(alice).toBeDefined();
+    expect(alice?.sessionCount).toBe(2);
+    expect(alice?.firstActiveAt?.toISOString()).toBe(
+      "2026-06-15T01:00:00.000Z",
+    );
+    expect(alice?.lastActiveAt?.toISOString()).toBe("2026-06-19T11:00:00.000Z");
+    const bob = rows.find((r) => r.username === "bob");
+    expect(bob).toBeDefined();
+    expect(bob?.sessionCount).toBe(1);
+  });
+
+  it("preserves BigInt beyond MAX_SAFE_INTEGER in sum", () => {
+    const rows = aggregateWeeklyUsage({
+      users: [
+        { id: "u1", username: "huge", email: "h@b.com", timezone: "UTC" },
+      ],
+      buckets: [
+        {
+          userId: "u1",
+          inputTokens: 9007199254740991n,
+          outputTokens: 2n,
+          reasoningTokens: 0n,
+          cachedTokens: 0n,
+          totalTokens: 9007199254740993n,
+          estimatedCostUsd: 0,
+          bucketStart: new Date("2026-06-15T01:00:00Z"),
+        },
+      ],
+      sessions: [],
+    });
+    expect(rows[0].totalTokens.toString()).toBe("9007199254740993");
   });
 });

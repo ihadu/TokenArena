@@ -24,6 +24,30 @@ export type IsoWeek = {
   toIso: string; // tz 下的 "YYYY-MM-DD"
 };
 
+export type WeeklyExportInput = {
+  users: Array<{
+    id: string;
+    username: string;
+    email: string;
+    timezone: string;
+  }>;
+  buckets: Array<{
+    userId: string;
+    inputTokens: bigint;
+    outputTokens: bigint;
+    reasoningTokens: bigint;
+    cachedTokens: bigint;
+    totalTokens: bigint;
+    estimatedCostUsd: number | null;
+    bucketStart: Date;
+  }>;
+  sessions: Array<{
+    userId: string;
+    firstMessageAt: Date;
+    lastMessageAt: Date;
+  }>;
+};
+
 const HEADER = [
   "username",
   "email",
@@ -95,6 +119,15 @@ function isoDateInTz(date: Date, timezone: string): string {
   }).format(date);
 }
 
+function ymdInTz(date: Date, timezone: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
 function isoWeekParts(
   y: number,
   m: number,
@@ -144,4 +177,92 @@ export function resolveIsoWeek(now: Date, timezone: string): IsoWeek {
     fromIso: isoDateInTz(fromUtc, timezone),
     toIso: isoDateInTz(toUtc, timezone),
   };
+}
+
+export function aggregateWeeklyUsage(
+  input: WeeklyExportInput,
+): WeeklyExportRow[] {
+  const bucketAgg = new Map<
+    string,
+    {
+      inputTokens: bigint;
+      outputTokens: bigint;
+      reasoningTokens: bigint;
+      cachedTokens: bigint;
+      totalTokens: bigint;
+      cost: number;
+      days: Set<string>;
+    }
+  >();
+  const sessionAgg = new Map<
+    string,
+    { count: number; first: Date | null; last: Date | null }
+  >();
+
+  for (const u of input.users) {
+    bucketAgg.set(u.id, {
+      inputTokens: 0n,
+      outputTokens: 0n,
+      reasoningTokens: 0n,
+      cachedTokens: 0n,
+      totalTokens: 0n,
+      cost: 0,
+      days: new Set(),
+    });
+    sessionAgg.set(u.id, { count: 0, first: null, last: null });
+  }
+
+  for (const b of input.buckets) {
+    const agg = bucketAgg.get(b.userId);
+    if (!agg) continue;
+    agg.inputTokens += b.inputTokens;
+    agg.outputTokens += b.outputTokens;
+    agg.reasoningTokens += b.reasoningTokens;
+    agg.cachedTokens += b.cachedTokens;
+    agg.totalTokens += b.totalTokens;
+    if (b.estimatedCostUsd !== null) agg.cost += b.estimatedCostUsd;
+    const u = input.users.find((x) => x.id === b.userId);
+    if (u) agg.days.add(ymdInTz(b.bucketStart, u.timezone));
+  }
+
+  for (const s of input.sessions) {
+    const agg = sessionAgg.get(s.userId);
+    if (!agg) continue;
+    agg.count += 1;
+    if (agg.first === null || s.firstMessageAt < agg.first)
+      agg.first = s.firstMessageAt;
+    if (agg.last === null || s.lastMessageAt > agg.last)
+      agg.last = s.lastMessageAt;
+  }
+
+  const emptyBucket = {
+    inputTokens: 0n,
+    outputTokens: 0n,
+    reasoningTokens: 0n,
+    cachedTokens: 0n,
+    totalTokens: 0n,
+    cost: 0,
+    days: new Set<string>(),
+  };
+  const emptySession = { count: 0, first: null, last: null };
+
+  return input.users.map((u) => {
+    const b = bucketAgg.get(u.id) ?? emptyBucket;
+    const s = sessionAgg.get(u.id) ?? emptySession;
+    return {
+      username: u.username,
+      email: u.email,
+      timezone: u.timezone,
+      inputTokens: b.inputTokens,
+      outputTokens: b.outputTokens,
+      reasoningTokens: b.reasoningTokens,
+      cachedTokens: b.cachedTokens,
+      totalTokens: b.totalTokens,
+      estimatedCostUsd: b.cost,
+      activeDays: b.days.size,
+      sessionCount: s.count,
+      firstActiveAt: s.first,
+      lastActiveAt: s.last,
+    };
+  });
 }
