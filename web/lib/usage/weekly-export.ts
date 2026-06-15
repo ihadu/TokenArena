@@ -30,7 +30,7 @@ const HEADER = [
   "last_active_at",
 ];
 
-const BOM = "þÿ";
+const BOM = String.fromCharCode(0xfeff);
 
 function formatCell(value: string | number | bigint | null): string {
   if (value === null || value === undefined) return "";

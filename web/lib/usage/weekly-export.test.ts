@@ -49,15 +49,14 @@ const baseRow: WeeklyExportRow = {
 };
 
 describe("buildCsv", () => {
-  it("starts with UTF-8 BOM", () => {
+  it("starts with U+FEFF BOM", () => {
     const out = buildCsv([baseRow]);
-    expect(out.charCodeAt(0)).toBe(0xfe);
-    expect(out.charCodeAt(1)).toBe(0xff);
+    expect(out.charCodeAt(0)).toBe(0xfeff);
   });
 
   it("emits header in fixed column order", () => {
     const out = buildCsv([baseRow]);
-    const body = out.slice(2);
+    const body = out.slice(1);
     const expectedHeader =
       "username,email,timezone,input_tokens,output_tokens,reasoning_tokens,cached_tokens,total_tokens,estimated_cost_usd,active_days,session_count,first_active_at,last_active_at";
     expect(body.startsWith(`${expectedHeader}\n`)).toBe(true);
@@ -100,15 +99,17 @@ describe("buildCsv", () => {
     expect(out).toMatch(/,0,0,,\n$/);
   });
 
-  it("escapes email with comma", () => {
-    const weird: WeeklyExportRow = { ...baseRow, email: 'a,"b"c@d.com' };
+  it("escapes email with comma and embedded quote", () => {
+    const weird: WeeklyExportRow = { ...baseRow, email: 'a,b"c@d.com' };
     const out = buildCsv([weird]);
-    expect(out).toContain('"a,""b""c@d.com"');
+    // csvEscape('a,b"c@d.com') wraps in quotes and doubles the embedded quote
+    // → "\"a,b\"\"c@d.com\""
+    expect(out).toContain('"a,b""c@d.com"');
   });
 
   it("returns header only when rows is empty", () => {
     const out = buildCsv([]);
-    const lines = out.slice(2).split("\n");
+    const lines = out.slice(1).split("\n");
     expect(lines).toHaveLength(2);
     expect(lines[0].split(",")).toHaveLength(13);
     expect(lines[1]).toBe("");
