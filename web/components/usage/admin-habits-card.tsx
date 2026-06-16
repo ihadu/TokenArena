@@ -50,7 +50,6 @@ export function AdminHabitsCard({ t, habits }: Props) {
   const peakIdx = peakHourIndex(hour);
   const peakValue = hour[peakIdx] ?? 0;
   const peakWeekdayIdx = peakHourIndex(weekday);
-  const peakWeekdayValue = weekday[peakWeekdayIdx] ?? 0;
 
   return (
     <Card className="bg-card shadow-sm ring-1 ring-border/60">
@@ -151,27 +150,15 @@ export function AdminHabitsCard({ t, habits }: Props) {
         </div>
 
         <div>
-          <div className="flex items-baseline justify-between mb-1.5">
-            <div className="text-sm font-medium">
-              {t("weekdayDistribution")}
-            </div>
-            {weekdayTotal > 0 && peakWeekdayValue > 0 ? (
-              <div className="text-[10px] tabular-nums text-amber-700 dark:text-amber-300">
-                {t("peakHour", {
-                  hour: t(WEEKDAY_KEYS[peakWeekdayIdx] ?? "weekdayShortSun"),
-                })}
-                <span className="text-muted-foreground ml-1">
-                  ({peakWeekdayValue})
-                </span>
-              </div>
-            ) : null}
+          <div className="text-sm font-medium mb-1.5">
+            {t("weekdayDistribution")}
           </div>
           {weekdayTotal === 0 ? (
-            <div className="h-16 flex items-center justify-center text-xs text-muted-foreground">
+            <div className="h-20 flex items-center justify-center text-xs text-muted-foreground">
               {t("noActivity")}
             </div>
           ) : (
-            <div className="flex h-16 items-end gap-1">
+            <div className="flex h-20 items-end gap-1">
               {WEEKDAY_KEYS.map((key, i) => {
                 const v = weekday[i] ?? 0;
                 const ratio = v / weekdayMax;
@@ -179,17 +166,28 @@ export function AdminHabitsCard({ t, habits }: Props) {
                 return (
                   <div
                     key={key}
-                    className="flex-1 flex flex-col items-center gap-1"
+                    className="flex-1 flex flex-col items-center"
                     title={`${t(key)} — ${v}`}
                   >
                     <div
-                      className={`w-full min-h-[3px] rounded-sm ${
+                      className={`text-[10px] leading-none h-3 mb-0.5 tabular-nums ${
                         isPeak
-                          ? "bg-amber-500 ring-1 ring-amber-600"
-                          : "bg-amber-500/60"
+                          ? "font-semibold text-amber-700 dark:text-amber-300"
+                          : "text-muted-foreground"
                       }`}
-                      style={{ height: `${Math.max(ratio * 100, 2)}%` }}
-                    />
+                    >
+                      {v > 0 ? v : ""}
+                    </div>
+                    <div className="w-full h-12 flex items-end">
+                      <div
+                        className={`w-full min-h-[3px] rounded-sm ${
+                          isPeak
+                            ? "bg-amber-500 ring-1 ring-amber-600"
+                            : "bg-amber-500/60"
+                        }`}
+                        style={{ height: `${Math.max(ratio * 100, 2)}%` }}
+                      />
+                    </div>
                     <div className="text-[10px] text-muted-foreground">
                       {t(key)}
                     </div>

@@ -50,7 +50,7 @@ describe("AdminHabitsCard", () => {
     expect(markup).toContain("No activity yet");
   });
 
-  it("renders bars with min-height baseline and peak label when data exists", () => {
+  it("renders bars with min-height baseline and peak highlight when data exists", () => {
     const hour = new Array(24).fill(0);
     hour[17] = 19;
     hour[18] = 10;
@@ -72,12 +72,13 @@ describe("AdminHabitsCard", () => {
     expect(markup).toContain("Active hours (24h)");
     expect(markup).toContain("Peak 17:00");
     expect(markup).toContain("Weekday distribution");
-    expect(markup).toContain("Peak Mon");
     expect(markup).toContain("Mon");
+    // Inline count above the bar
+    expect(markup).toContain(">32<");
     expect(markup).not.toContain("No activity yet");
   });
 
-  it("highlights the weekday peak bar with solid amber and ring", () => {
+  it("highlights the weekday peak bar with solid amber and ring; non-peak gets /60", () => {
     const hour = new Array(24).fill(0);
     hour[17] = 19;
     const weekday = new Array(7).fill(0);
@@ -95,15 +96,13 @@ describe("AdminHabitsCard", () => {
       />,
     );
 
-    // The peak bar (Wed) gets solid amber + ring; non-peak gets /60.
     expect(markup).toContain("ring-amber-600");
     expect(markup).toContain("bg-amber-500/60");
-    // Peak value annotation
-    expect(markup).toContain("Peak Wed");
-    expect(markup).toContain("(126)");
+    // Peak value inline above bar
+    expect(markup).toContain(">126<");
   });
 
-  it("uses h-16 container for weekday chart (matches hour chart)", () => {
+  it("uses h-20 container for weekday chart (taller than hour chart for readability)", () => {
     const weekday = new Array(7).fill(0);
     weekday[1] = 10;
     const markup = renderToStaticMarkup(
@@ -119,10 +118,10 @@ describe("AdminHabitsCard", () => {
       />,
     );
 
-    expect(markup).toContain("h-16 items-end gap-1");
+    expect(markup).toContain("h-20 items-end gap-1");
   });
 
-  it("does not render weekday peak annotation when weekday data is zero", () => {
+  it("does not render weekday peak number when weekday data is zero", () => {
     const markup = renderToStaticMarkup(
       <AdminHabitsCard
         t={fakeT}
@@ -136,8 +135,30 @@ describe("AdminHabitsCard", () => {
       />,
     );
 
-    // Empty weekday shows the placeholder, no peak label
+    // Empty weekday shows the placeholder
     expect(markup).toContain("No activity yet");
-    expect(markup).not.toContain("Peak Sun");
+  });
+
+  it("renders all non-zero counts inline above their weekday bars", () => {
+    const weekday = new Array(7).fill(0);
+    weekday[0] = 3;
+    weekday[3] = 126;
+    weekday[5] = 8;
+    const markup = renderToStaticMarkup(
+      <AdminHabitsCard
+        t={fakeT}
+        habits={{
+          hourHistogram: new Array(24).fill(0),
+          weekdayHistogram: weekday,
+          currentStreak: 0,
+          longestStreak: 0,
+          deviceCount: 0,
+        }}
+      />,
+    );
+
+    expect(markup).toContain(">3<");
+    expect(markup).toContain(">126<");
+    expect(markup).toContain(">8<");
   });
 });
