@@ -148,15 +148,6 @@ describe("getAdminUsageAnalytics", () => {
       totalActiveSeconds: 60000,
       totalSessions: 100,
       totalActiveDays: 7,
-      activeDayKeys: [
-        "2026-05-01",
-        "2026-05-02",
-        "2026-05-03",
-        "2026-05-04",
-        "2026-05-05",
-        "2026-05-06",
-        "2026-05-07",
-      ],
     });
     // 6. lifetime aggregates (cached + reasoning)
     prismaMock.usageBucket.aggregate.mockResolvedValueOnce({

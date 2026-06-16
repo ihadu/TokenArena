@@ -284,8 +284,8 @@ export async function getAdminUsageAnalytics(input: {
   const prevAvgTokensPerSession =
     prevSessions > 0 ? prevTokens / prevSessions : 0;
 
-  // 终身聚合（r ratios 需要单独查询）
-  const lifetimeActiveDays = lifetime.activeDayKeys?.length ?? 0;
+  // 终身聚合（ratios 需要单独查询）
+  const lifetimeActiveDays = lifetime.totalActiveDays;
   const lifetimeTotalTokens = Number(lifetimeAggregates._sum.totalTokens ?? 0);
   const lifetimeCached = Number(lifetimeAggregates._sum.cachedTokens ?? 0);
   const lifetimeReasoning = Number(
