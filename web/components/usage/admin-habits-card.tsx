@@ -49,6 +49,8 @@ export function AdminHabitsCard({ t, habits }: Props) {
   const weekdayTotal = weekday.reduce((s, v) => s + v, 0);
   const peakIdx = peakHourIndex(hour);
   const peakValue = hour[peakIdx] ?? 0;
+  const peakWeekdayIdx = peakHourIndex(weekday);
+  const peakWeekdayValue = weekday[peakWeekdayIdx] ?? 0;
 
   return (
     <Card className="bg-card shadow-sm ring-1 ring-border/60">
@@ -149,18 +151,31 @@ export function AdminHabitsCard({ t, habits }: Props) {
         </div>
 
         <div>
-          <div className="text-sm font-medium mb-1.5">
-            {t("weekdayDistribution")}
+          <div className="flex items-baseline justify-between mb-1.5">
+            <div className="text-sm font-medium">
+              {t("weekdayDistribution")}
+            </div>
+            {weekdayTotal > 0 && peakWeekdayValue > 0 ? (
+              <div className="text-[10px] tabular-nums text-amber-700 dark:text-amber-300">
+                {t("peakHour", {
+                  hour: t(WEEKDAY_KEYS[peakWeekdayIdx] ?? "weekdayShortSun"),
+                })}
+                <span className="text-muted-foreground ml-1">
+                  ({peakWeekdayValue})
+                </span>
+              </div>
+            ) : null}
           </div>
           {weekdayTotal === 0 ? (
-            <div className="h-12 flex items-center justify-center text-xs text-muted-foreground">
+            <div className="h-16 flex items-center justify-center text-xs text-muted-foreground">
               {t("noActivity")}
             </div>
           ) : (
-            <div className="flex h-12 items-end gap-1">
+            <div className="flex h-16 items-end gap-1">
               {WEEKDAY_KEYS.map((key, i) => {
                 const v = weekday[i] ?? 0;
                 const ratio = v / weekdayMax;
+                const isPeak = i === peakWeekdayIdx && v > 0;
                 return (
                   <div
                     key={key}
@@ -168,7 +183,11 @@ export function AdminHabitsCard({ t, habits }: Props) {
                     title={`${t(key)} — ${v}`}
                   >
                     <div
-                      className="w-full min-h-[3px] rounded-sm bg-amber-500/60"
+                      className={`w-full min-h-[3px] rounded-sm ${
+                        isPeak
+                          ? "bg-amber-500 ring-1 ring-amber-600"
+                          : "bg-amber-500/60"
+                      }`}
                       style={{ height: `${Math.max(ratio * 100, 2)}%` }}
                     />
                     <div className="text-[10px] text-muted-foreground">
