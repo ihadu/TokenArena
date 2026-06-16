@@ -1,11 +1,18 @@
 import "server-only";
 
 import { getAchievementArenaSummary } from "@/lib/achievements/queries";
+import { getPricingCatalog } from "@/lib/pricing/catalog";
+import {
+  estimateCostUsd,
+  resolveOfficialPricingMatch,
+} from "@/lib/pricing/resolve";
 import { prisma } from "@/lib/prisma";
+import { tokenCountToNumber } from "@/lib/token-counts";
 import { getPreviousRange, getZonedWeekdayHour } from "@/lib/usage/date-range";
 import { formatDateInput } from "@/lib/usage/format";
 import {
   type AdminAnalyticsFixture,
+  type AdminAnalyticsMetric,
   detectInsights,
 } from "@/lib/usage/insights";
 import type { DashboardRange } from "@/lib/usage/types";
@@ -20,14 +27,6 @@ export type AdminProjectDrilldown = {
 };
 
 export type AdminAnalytics = AdminAnalyticsFixture & {
-  comparison: AdminAnalyticsFixture["comparison"] & {
-    vsPlatform: {
-      tokens: number;
-      cost: number;
-      sessions: number;
-      activeSeconds: number;
-    };
-  };
   insights: ReturnType<typeof detectInsights>;
   projectDrilldown: AdminProjectDrilldown[];
   hourHistogram: number[];
@@ -40,14 +39,25 @@ export async function getAdminUsageAnalytics(input: {
   timezone: string;
 }): Promise<AdminAnalytics> {
   const prev = getPreviousRange(input.range);
+  const periodMs = Math.max(
+    1,
+    input.range.to.getTime() - input.range.from.getTime(),
+  );
+  const periodDays = Math.max(1, Math.round(periodMs / 86_400_000));
 
   const [
     buckets,
     sessions,
     bucketsPrev,
-    platform,
+    sessionsPrev,
+    lifetime,
+    lifetimeAggregates,
     devicesCount,
     devicesCountPrev,
+    platformTokensByUser,
+    platformSessionsByUser,
+    platformCostBuckets,
+    catalog,
   ] = await Promise.all([
     prisma.usageBucket.findMany({
       where: {
@@ -57,6 +67,10 @@ export async function getAdminUsageAnalytics(input: {
       select: {
         bucketStart: true,
         totalTokens: true,
+        inputTokens: true,
+        outputTokens: true,
+        reasoningTokens: true,
+        cachedTokens: true,
         source: true,
         model: true,
         projectKey: true,
@@ -83,12 +97,34 @@ export async function getAdminUsageAnalytics(input: {
       select: {
         bucketStart: true,
         totalTokens: true,
+        inputTokens: true,
+        outputTokens: true,
+        reasoningTokens: true,
+        cachedTokens: true,
         model: true,
         projectKey: true,
         projectLabel: true,
       },
     }),
+    prisma.usageSession.findMany({
+      where: {
+        userId: input.userId,
+        firstMessageAt: { gte: prev.from, lte: prev.to },
+      },
+      select: {
+        firstMessageAt: true,
+        activeSeconds: true,
+      },
+    }),
     getAchievementArenaSummary(input.userId),
+    prisma.usageBucket.aggregate({
+      where: { userId: input.userId },
+      _sum: {
+        totalTokens: true,
+        cachedTokens: true,
+        reasoningTokens: true,
+      },
+    }),
     prisma.device.count({ where: { userId: input.userId } }),
     prisma.device.count({
       where: {
@@ -96,19 +132,70 @@ export async function getAdminUsageAnalytics(input: {
         lastSeenAt: { gte: prev.from, lte: prev.to },
       },
     }),
+    prisma.usageBucket.groupBy({
+      by: ["userId"],
+      where: { bucketStart: { gte: input.range.from, lte: input.range.to } },
+      _sum: {
+        totalTokens: true,
+        cachedTokens: true,
+        reasoningTokens: true,
+      },
+    }),
+    prisma.usageSession.groupBy({
+      by: ["userId"],
+      where: {
+        firstMessageAt: { gte: input.range.from, lte: input.range.to },
+      },
+      _sum: { activeSeconds: true },
+      _count: { _all: true },
+    }),
+    prisma.usageBucket.findMany({
+      where: { bucketStart: { gte: input.range.from, lte: input.range.to } },
+      select: {
+        userId: true,
+        model: true,
+        inputTokens: true,
+        outputTokens: true,
+        reasoningTokens: true,
+        cachedTokens: true,
+      },
+    }),
+    getPricingCatalog(),
   ]);
 
-  // 日均：分母 = 活跃天数
+  // 当前周期聚合
   const activeDays = new Set(
     buckets.map((b) => formatDateInput(b.bucketStart, input.timezone)),
   ).size;
   const totalTokens = buckets.reduce((s, b) => s + Number(b.totalTokens), 0);
+  const totalCached = buckets.reduce(
+    (s, b) => s + Number(b.cachedTokens ?? 0),
+    0,
+  );
+  const totalReasoning = buckets.reduce(
+    (s, b) => s + Number(b.reasoningTokens ?? 0),
+    0,
+  );
   const totalSessions = sessions.length;
   const totalActiveSeconds = sessions.reduce((s, x) => s + x.activeSeconds, 0);
-  const totalCost = 0;
 
-  // 成本数据未在此聚合；待接入价格目录后再生成 dailyCosts
-  const dailyCosts: number[] = [];
+  const costByDate = new Map<string, number>();
+  let totalCost = 0;
+  for (const b of buckets) {
+    const usd = estimateBucketCostUsd(b, catalog);
+    if (usd <= 0) continue;
+    totalCost += usd;
+    const key = formatDateInput(b.bucketStart, input.timezone);
+    costByDate.set(key, (costByDate.get(key) ?? 0) + usd);
+  }
+  const dailyCosts: number[] = Array.from(costByDate.values());
+
+  // 当前周期的 ratio metric
+  const currentCacheHitRate = totalTokens > 0 ? totalCached / totalTokens : 0;
+  const currentReasoningShare =
+    totalTokens > 0 ? totalReasoning / totalTokens : 0;
+  const currentAvgTokensPerSession =
+    totalSessions > 0 ? totalTokens / totalSessions : 0;
 
   // 习惯
   const hourHistogram = new Array(24).fill(0);
@@ -170,27 +257,156 @@ export async function getAdminUsageAnalytics(input: {
     }))
     .sort((a, b) => b.totalTokens - a.totalTokens);
 
-  // 对比
+  // 上周期聚合
   const prevTokens = bucketsPrev.reduce((s, b) => s + Number(b.totalTokens), 0);
-  const platformTokens = Number(platform.totalTokens);
-  const denom = activeDays || 1;
+  const prevCached = bucketsPrev.reduce(
+    (s, b) => s + Number(b.cachedTokens ?? 0),
+    0,
+  );
+  const prevReasoning = bucketsPrev.reduce(
+    (s, b) => s + Number(b.reasoningTokens ?? 0),
+    0,
+  );
+  const prevCost = bucketsPrev.reduce(
+    (s, b) => s + estimateBucketCostUsd(b, catalog),
+    0,
+  );
+  const prevSessions = sessionsPrev.length;
+  const _prevActiveSeconds = sessionsPrev.reduce(
+    (s, x) => s + x.activeSeconds,
+    0,
+  );
+  const prevActiveDays = new Set(
+    bucketsPrev.map((b) => formatDateInput(b.bucketStart, input.timezone)),
+  ).size;
+  const prevCacheHitRate = prevTokens > 0 ? prevCached / prevTokens : 0;
+  const prevReasoningShare = prevTokens > 0 ? prevReasoning / prevTokens : 0;
+  const prevAvgTokensPerSession =
+    prevSessions > 0 ? prevTokens / prevSessions : 0;
+
+  // 终身聚合（r ratios 需要单独查询）
+  const lifetimeActiveDays = lifetime.activeDayKeys?.length ?? 0;
+  const lifetimeTotalTokens = Number(lifetimeAggregates._sum.totalTokens ?? 0);
+  const lifetimeCached = Number(lifetimeAggregates._sum.cachedTokens ?? 0);
+  const lifetimeReasoning = Number(
+    lifetimeAggregates._sum.reasoningTokens ?? 0,
+  );
+  const lifetimeCacheHitRate =
+    lifetimeTotalTokens > 0 ? lifetimeCached / lifetimeTotalTokens : 0;
+  const lifetimeReasoningShare =
+    lifetimeTotalTokens > 0 ? lifetimeReasoning / lifetimeTotalTokens : 0;
+  const lifetimeAvgTokensPerSession =
+    (lifetime.totalSessions ?? 0) > 0
+      ? lifetimeTotalTokens / (lifetime.totalSessions ?? 0)
+      : 0;
+
+  // 平台 P50：per-user 总量 → P50 → / periodDays
+  const perUserTokens = platformTokensByUser.map((r) =>
+    Number(r._sum.totalTokens ?? 0),
+  );
+  const perUserSessions = new Map(
+    platformSessionsByUser.map((r) => [r.userId, r._count._all ?? 0]),
+  );
+  const perUserAvgTokensPerSession: number[] = [];
+  for (const r of platformTokensByUser) {
+    const sessions = perUserSessions.get(r.userId) ?? 0;
+    const tokens = Number(r._sum.totalTokens ?? 0);
+    if (sessions > 0) perUserAvgTokensPerSession.push(tokens / sessions);
+  }
+  const perUserCacheHitRate: number[] = [];
+  for (const r of platformTokensByUser) {
+    const total = Number(r._sum.totalTokens ?? 0);
+    const cached = Number(r._sum.cachedTokens ?? 0);
+    if (total > 0) perUserCacheHitRate.push(cached / total);
+  }
+  const perUserReasoningShare: number[] = [];
+  for (const r of platformTokensByUser) {
+    const total = Number(r._sum.totalTokens ?? 0);
+    const reasoning = Number(r._sum.reasoningTokens ?? 0);
+    if (total > 0) perUserReasoningShare.push(reasoning / total);
+  }
+  const perUserCost: number[] = [];
+  const perUserCostMap = new Map<string, number>();
+  for (const b of platformCostBuckets) {
+    const usd = estimateBucketCostUsd(b, catalog);
+    if (usd <= 0) continue;
+    perUserCostMap.set(b.userId, (perUserCostMap.get(b.userId) ?? 0) + usd);
+  }
+  for (const v of perUserCostMap.values()) perUserCost.push(v);
+
+  const p50Tokens = percentile(perUserTokens, 0.5) / periodDays;
+  const p50Cost = percentile(perUserCost, 0.5) / periodDays;
+  const p50CacheHitRate = percentile(perUserCacheHitRate, 0.5);
+  const p50ReasoningShare = percentile(perUserReasoningShare, 0.5);
+  const p50AvgTokensPerSession = percentile(perUserAvgTokensPerSession, 0.5);
+
+  // 当前 user 的 per-day 归一化
+  const userDenom = Math.max(1, activeDays);
+  const currentTokensPerDay = totalTokens / userDenom;
+  const currentCostPerDay = totalCost / userDenom;
+  const prevDenom = Math.max(1, prevActiveDays);
+  const prevTokensPerDay = prevTokens / prevDenom;
+  const prevCostPerDay = prevCost / prevDenom;
+  const lifetimeDenom = Math.max(1, lifetimeActiveDays);
+  const lifetimeTokensPerDay = Number(lifetime.totalTokens) / lifetimeDenom;
+  const lifetimeCostPerDay = lifetime.totalEstimatedCostUsd / lifetimeDenom;
+
+  const metrics: AdminAnalyticsMetric[] = [
+    {
+      key: "tokens",
+      format: "tokens",
+      current: currentTokensPerDay,
+      lifetime: lifetimeTokensPerDay,
+      vsPlatform: p50Tokens,
+      vsPrev: prevTokensPerDay,
+    },
+    {
+      key: "cost",
+      format: "cost",
+      current: currentCostPerDay,
+      lifetime: lifetimeCostPerDay,
+      vsPlatform: p50Cost,
+      vsPrev: prevCostPerDay,
+    },
+    {
+      key: "cacheHitRate",
+      format: "percent",
+      current: currentCacheHitRate,
+      lifetime: lifetimeCacheHitRate,
+      vsPlatform: p50CacheHitRate,
+      vsPrev: prevCacheHitRate,
+    },
+    {
+      key: "reasoningShare",
+      format: "percent",
+      current: currentReasoningShare,
+      lifetime: lifetimeReasoningShare,
+      vsPlatform: p50ReasoningShare,
+      vsPrev: prevReasoningShare,
+    },
+    {
+      key: "avgTokensPerSession",
+      format: "ratio",
+      current: currentAvgTokensPerSession,
+      lifetime: lifetimeAvgTokensPerSession,
+      vsPlatform: p50AvgTokensPerSession,
+      vsPrev: prevAvgTokensPerSession,
+    },
+  ];
+
   const fixture: AdminAnalyticsFixture = {
     dailyAverages: {
       activeDays,
-      tokens: totalTokens / denom,
-      cost: totalCost / denom,
-      sessions: totalSessions / denom,
-      activeSeconds: totalActiveSeconds / denom,
+      tokens: currentTokensPerDay,
+      cost: currentCostPerDay,
+      sessions: totalSessions / userDenom,
+      activeSeconds: totalActiveSeconds / userDenom,
     },
     habits: { currentStreak, longestStreak, deviceCount: devicesCount },
-    comparison: {
-      vsPrevPeriod: {
-        tokens: prevTokens,
-        cost: 0,
-        sessions: 0,
-        activeSeconds: 0,
-      },
-    },
+    metrics,
+    prevActiveDays,
+    costAvailable: catalog !== null,
+    prevPeriodAvailable: prevActiveDays > 0,
     dailyCosts,
     projectShareShift: computeTopProjectShift(buckets, bucketsPrev),
     topModel: mostCommonModel(buckets),
@@ -202,15 +418,6 @@ export async function getAdminUsageAnalytics(input: {
 
   return {
     ...fixture,
-    comparison: {
-      ...fixture.comparison,
-      vsPlatform: {
-        tokens: platformTokens,
-        cost: platform.totalEstimatedCostUsd,
-        sessions: platform.totalSessions,
-        activeSeconds: platform.totalActiveSeconds,
-      },
-    },
     insights,
     projectDrilldown,
     hourHistogram,
@@ -239,7 +446,6 @@ function computeStreaks(activeDates: Set<string>): {
       run = 1;
     }
   }
-  // 当前连击：从最近一天向前回溯，统计连续天数
   let current = 1;
   for (let i = sorted.length - 1; i > 0; i--) {
     const newerStr = sorted[i];
@@ -287,4 +493,39 @@ function computeTopProjectShift(
       ? prev.reduce((m, x) => Math.max(m, Number(x.totalTokens)), 0) / pTotal
       : 0;
   return Math.abs(cTop - pTop);
+}
+
+function estimateBucketCostUsd(
+  bucket: {
+    model: string;
+    inputTokens: number | bigint | null;
+    outputTokens: number | bigint | null;
+    reasoningTokens: number | bigint | null;
+    cachedTokens: number | bigint | null;
+  },
+  catalog: Awaited<ReturnType<typeof getPricingCatalog>>,
+): number {
+  const match = resolveOfficialPricingMatch(catalog, bucket.model);
+  if (!match) return 0;
+  const estimate = estimateCostUsd(
+    {
+      inputTokens: tokenCountToNumber(bucket.inputTokens),
+      outputTokens: tokenCountToNumber(bucket.outputTokens),
+      reasoningTokens: tokenCountToNumber(bucket.reasoningTokens),
+      cachedTokens: tokenCountToNumber(bucket.cachedTokens),
+    },
+    match.cost,
+  );
+  return estimate?.totalUsd ?? 0;
+}
+
+function percentile(values: number[], p: number): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const idx = (sorted.length - 1) * p;
+  const lo = Math.floor(idx);
+  const hi = Math.ceil(idx);
+  if (lo === hi) return sorted[lo]!;
+  const w = idx - lo;
+  return sorted[lo]! * (1 - w) + sorted[hi]! * w;
 }

@@ -122,21 +122,10 @@ export async function AdminDashboardBlock({
         <AdminComparisonCard
           t={t}
           locale={locale}
-          user={{
-            tokens:
-              analytics.dailyAverages.tokens *
-              analytics.dailyAverages.activeDays,
-            cost:
-              analytics.dailyAverages.cost * analytics.dailyAverages.activeDays,
-            sessions:
-              analytics.dailyAverages.sessions *
-              analytics.dailyAverages.activeDays,
-            activeSeconds:
-              analytics.dailyAverages.activeSeconds *
-              analytics.dailyAverages.activeDays,
-          }}
-          vsPlatform={analytics.comparison.vsPlatform}
-          vsPrevPeriod={analytics.comparison.vsPrevPeriod}
+          metrics={analytics.metrics}
+          prevActiveDays={analytics.prevActiveDays}
+          costAvailable={analytics.costAvailable}
+          prevPeriodAvailable={analytics.prevPeriodAvailable}
         />
         <AdminProjectDrilldownCard projects={analytics.projectDrilldown} />
       </CardContent>

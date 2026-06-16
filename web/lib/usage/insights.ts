@@ -1,3 +1,19 @@
+export type AdminAnalyticsMetricKey =
+  | "tokens"
+  | "cost"
+  | "cacheHitRate"
+  | "reasoningShare"
+  | "avgTokensPerSession";
+
+export type AdminAnalyticsMetric = {
+  key: AdminAnalyticsMetricKey;
+  format: "tokens" | "cost" | "percent" | "ratio";
+  current: number;
+  lifetime: number;
+  vsPlatform: number;
+  vsPrev: number;
+};
+
 export type AdminAnalyticsFixture = {
   dailyAverages: {
     activeDays: number;
@@ -7,14 +23,10 @@ export type AdminAnalyticsFixture = {
     activeSeconds: number;
   };
   habits: { currentStreak: number; longestStreak: number; deviceCount: number };
-  comparison: {
-    vsPrevPeriod: {
-      tokens: number;
-      cost: number;
-      sessions: number;
-      activeSeconds: number;
-    };
-  };
+  metrics: AdminAnalyticsMetric[];
+  prevActiveDays: number;
+  costAvailable: boolean;
+  prevPeriodAvailable: boolean;
   dailyCosts: number[];
   projectShareShift: number;
   topModel: string;

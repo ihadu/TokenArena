@@ -10,9 +10,10 @@ const base: AdminAnalyticsFixture = {
     activeSeconds: 600,
   },
   habits: { currentStreak: 0, longestStreak: 5, deviceCount: 2 },
-  comparison: {
-    vsPrevPeriod: { tokens: 1000, cost: 5, sessions: 3, activeSeconds: 600 },
-  },
+  metrics: [],
+  prevActiveDays: 7,
+  costAvailable: true,
+  prevPeriodAvailable: true,
   dailyCosts: [3, 4, 5, 4, 5, 6, 5, 4, 5, 4, 5, 4, 5, 4],
   projectShareShift: 0.1,
   topModel: "gpt-4",
