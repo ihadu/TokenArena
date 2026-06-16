@@ -1,5 +1,73 @@
 # Changelog
 
+## [0.7.0](https://github.com/ihadu/TokenArena/compare/v0.6.1...v0.7.0) (2026-06-16)
+
+
+### Features
+
+* **admin:** /[locale]/admin page with weekly CSV export button ([7909607](https://github.com/ihadu/TokenArena/commit/7909607909f5ebadb7d6fda9b3e964d08f51379b))
+* **admin:** GET /api/admin/weekly-export CSV endpoint ([310ee2e](https://github.com/ihadu/TokenArena/commit/310ee2e48cb12b278a4cc9ac3ca7c644ef568d9c))
+* **admin:** open usage/insights/comparison/projects dashboard to self ([1bc36a7](https://github.com/ihadu/TokenArena/commit/1bc36a7f0b798a0eb2e958177187b4d53daa50e6))
+* **admin:** polish profile analytics cards (histograms + units + i18n) ([bdab381](https://github.com/ihadu/TokenArena/commit/bdab381adfc97bd0d4328605f07a42aa9fe70a86))
+* **admin:** weekly CSV export button on profile admin block ([119d830](https://github.com/ihadu/TokenArena/commit/119d830445dd8cdc5fc26632b1bf5c0cff784ea5))
+* **cli:** always store raw project name as label ([bd7636b](https://github.com/ihadu/TokenArena/commit/bd7636bd9b70b6146def95bd335a4996fe88a895))
+* **cli:** support Kimi 0.9 wire.jsonl event and usage variants ([62f1743](https://github.com/ihadu/TokenArena/commit/62f1743aa89f4d2291861666ad4695afcb4d2b0b))
+* **usage:** aggregateWeeklyUsage merging bucket+session per user ([0642e63](https://github.com/ihadu/TokenArena/commit/0642e6339f198b58fd3b53d35bdc911732b748c2))
+* **usage:** buildCsv with 13-column weekly export format ([cc20ebd](https://github.com/ihadu/TokenArena/commit/cc20ebd3109f45bde0b9b3d7576ce0f3dc360894))
+* **usage:** csvEscape helper for admin weekly export ([91b5bd2](https://github.com/ihadu/TokenArena/commit/91b5bd20f73464ca303540381c655550e3249d96))
+* **usage:** in-memory rate limiter for admin weekly export ([42befa4](https://github.com/ihadu/TokenArena/commit/42befa4686452b2838d16ad4b74b5d55e03f3df4))
+* **usage:** paginate project drilldown card (5 per page) ([db5811f](https://github.com/ihadu/TokenArena/commit/db5811f4b002ce4d4126a1b8500ac675c8504886))
+* **usage:** resolveIsoWeek with timezone-aware boundary ([eb230af](https://github.com/ihadu/TokenArena/commit/eb230aff650c23a6426986b0ae4dbb0c31bacad5))
+* **web:** add admin analytics aggregator ([8bc88c8](https://github.com/ihadu/TokenArena/commit/8bc88c8e1a7e73ac0f136a52cd8c1b03f4a0fa8c))
+* **web:** add admin comparison card ([ea21698](https://github.com/ihadu/TokenArena/commit/ea2169848e9ffbdcb34dcba047c8ea71fc5dc054))
+* **web:** add admin habits card ([d279989](https://github.com/ihadu/TokenArena/commit/d279989705f3b0c901d085befba4479ff9b60b0d))
+* **web:** add admin insights + project drilldown cards ([0279e31](https://github.com/ihadu/TokenArena/commit/0279e31c94307329c67d7fc251e78fb1fa75a7f7))
+* **web:** add cached SMTP transport ([5ef72c5](https://github.com/ihadu/TokenArena/commit/5ef72c520c98c5c9a9aff4fd844a713fd812e763))
+* **web:** add CN holiday module with isNonWorkingDay ([7505069](https://github.com/ihadu/TokenArena/commit/750506931fa78d2f56da959ff94fbe198e2d1e06))
+* **web:** add date range filters to admin dashboard ([5ddadd0](https://github.com/ihadu/TokenArena/commit/5ddadd0fe54376b5ecc115b334e6d9368cfe40b9))
+* **web:** add getProjectDisplayLabel helper ([e7cd5b8](https://github.com/ihadu/TokenArena/commit/e7cd5b8f2ce82a1740dc0d2e81f982c47194263e))
+* **web:** add i18n keys for admin analytics + email templates ([48c8a60](https://github.com/ihadu/TokenArena/commit/48c8a606fb3bfe5579d3934e28af6ea996585c9a))
+* **web:** add inactivity email template renderer ([7242f46](https://github.com/ihadu/TokenArena/commit/7242f46d2d3c9123c552fcd7d5f63f297166e81e))
+* **web:** add inactivity sweep with per-user try/catch ([508ae57](https://github.com/ihadu/TokenArena/commit/508ae57fbf1898c2c4a722f7eeefce8167047a7f))
+* **web:** add InactivityReminder model ([11b36f6](https://github.com/ihadu/TokenArena/commit/11b36f68f59032db2db7ff158adca038335017d7))
+* **web:** add rule-based insights engine with min-sample guards ([90e9552](https://github.com/ihadu/TokenArena/commit/90e9552b2f8fed3fe8a3502a9410681c7f19a555))
+* **web:** admin sees raw project names in dashboard block ([bbcf226](https://github.com/ihadu/TokenArena/commit/bbcf226f73c878e15a6f75c631fdabb7d43c58bb))
+* **web:** allow admin to view other users' full usage dashboard ([7fcced9](https://github.com/ihadu/TokenArena/commit/7fcced9368b748a7d472939cbb96721bf9e2e801))
+* **web:** apply project display mode in BreakdownGrid ([e1da36c](https://github.com/ihadu/TokenArena/commit/e1da36c8d7a3c3c9b3b317eaebcbb449faea7d71))
+* **web:** apply project display mode in FiltersBar ([3b2909c](https://github.com/ihadu/TokenArena/commit/3b2909cb1e904acc28bdbf680c9e791171b0b299))
+* **web:** apply project display mode in SessionsSection ([1c086a6](https://github.com/ihadu/TokenArena/commit/1c086a63267a50729b54ed53504f853b470d18f5))
+* **web:** backfill UsagePreference timezone to Asia/Shanghai ([d5f6536](https://github.com/ihadu/TokenArena/commit/d5f653630ebd3b0011d7b4d61dd64bba8f32e2b7))
+* **web:** default UsagePreference timezone to Asia/Shanghai ([adf68ba](https://github.com/ihadu/TokenArena/commit/adf68ba733ff9b9c4f4e47f29b9eaaf37421f4af))
+* **web:** extend KpiGrid with daily-average sub-cards ([246f619](https://github.com/ihadu/TokenArena/commit/246f619b2810de714a7aabaaf796b5f283c97e2c))
+* **web:** self usage page respects projectMode in displays ([5c14677](https://github.com/ihadu/TokenArena/commit/5c1467776cf354129d75b8c735fff74846635357))
+* **web:** wire admin analytics cards into dashboard block ([6d5f076](https://github.com/ihadu/TokenArena/commit/6d5f076ceee546b59cd9fe495ca86dda51d42cad))
+* **worker:** add docker-compose service + SMTP env config ([01cf46a](https://github.com/ihadu/TokenArena/commit/01cf46a09c80b57315b0482cf778fe08fe0ecbab))
+* **worker:** bundle with esbuild to resolve web's TS+path-alias imports at runtime ([238eb4a](https://github.com/ihadu/TokenArena/commit/238eb4a03e711b4908dbf3dc59cfd30a8967a2ff))
+* **worker:** scaffold cron worker for inactivity sweep ([d91265c](https://github.com/ihadu/TokenArena/commit/d91265c562aa01cacfe5be50f9f382be87a678b4))
+
+
+### Bug Fixes
+
+* **admin:** add inline counts to weekday chart, drop title-row peak label ([70ec623](https://github.com/ihadu/TokenArena/commit/70ec623bfec005e1c31ecd0373466972e544675a))
+* **admin:** restore weekday distribution chart legibility ([92165f3](https://github.com/ihadu/TokenArena/commit/92165f373119ee65fb86296bd5292632013fbcfb))
+* **admin:** use admin's own timezone for week window; drop no-op self audit log ([09889dd](https://github.com/ihadu/TokenArena/commit/09889dde2d560a624fcbc47f157a36cba81cae32))
+* **auth:** explicitly trust LAN origins for better-auth ([4338f64](https://github.com/ihadu/TokenArena/commit/4338f648286d451d4063f739c41b87ad2c38a5a8))
+* **usage:** use U+FEFF BOM and correct test assertions in buildCsv ([d0898e4](https://github.com/ihadu/TokenArena/commit/d0898e4ff1c0eeea1bb337a09a0bb379a7fdac20))
+* **web:** correct operator precedence in weekday bar height ([524ad64](https://github.com/ihadu/TokenArena/commit/524ad645e5ff3127842ec9e902a6866c3edfd95b))
+* **web:** correct truncated-key test case in project-display ([e4c909e](https://github.com/ihadu/TokenArena/commit/e4c909e8449593dc4272a2eeda40b44cc5bf6261))
+* **web:** remove locale prefix from admin dashboard basePath ([5cc5d5b](https://github.com/ihadu/TokenArena/commit/5cc5d5b4d4567152102c98246ffa3d784cecb571))
+* **web:** resolve aggregator bugs (streaks, cost data, device count) ([1f77799](https://github.com/ihadu/TokenArena/commit/1f77799c5d100d6ebc34335e51d89b314359fc90))
+* **web:** resolve nextDay infinite loop on DST spring-forward days ([db0694a](https://github.com/ihadu/TokenArena/commit/db0694a470db81b8f8d49e8cb7d75abadde22581))
+* **web:** translate row labels + label first column header in comparison card ([36f33fa](https://github.com/ihadu/TokenArena/commit/36f33fa5515cefc92a163f63d7561485fd6c67bb))
+* **web:** use lowercase 'user' table name in InactivityReminder FK ([4c292a4](https://github.com/ihadu/TokenArena/commit/4c292a40fa2e215447cb741c22b15160e84ed1e6))
+* **worker:** 3-stage build (deps→builder→runner) to skip root husky prepare ([54f34d1](https://github.com/ihadu/TokenArena/commit/54f34d12e1a4c631223099246687f937d6089ba1))
+* **worker:** add --ignore-scripts to skip root husky prepare in --prod ([e1f0889](https://github.com/ihadu/TokenArena/commit/e1f0889f2ff5d1f11eeac34ac8767723771053f7))
+* **worker:** copy worker/node_modules from deps stage ([2675d52](https://github.com/ihadu/TokenArena/commit/2675d52c874f4e278c82f1043d9f0f63894f3275))
+* **worker:** drop COPY cli (excluded by .dockerignore) ([7c1a2af](https://github.com/ihadu/TokenArena/commit/7c1a2af3b2f8904b6efa4d8f98f200f7ab7b9958))
+* **worker:** run pnpm build (esbuild bundler) instead of tsc ([b9a4b6e](https://github.com/ihadu/TokenArena/commit/b9a4b6e34bb07f029c13508a25e8eff7de84fe12))
+* **worker:** run prisma generate and tsc via pnpm exec with WORKDIR ([bd68c62](https://github.com/ihadu/TokenArena/commit/bd68c62742bd0b65b73d529f315ef966ec0790c0))
+* **worker:** use npm pnpm install like web/Dockerfile (no corepack, no root tsconfig) ([846cd51](https://github.com/ihadu/TokenArena/commit/846cd51e3ee7b2b0963beead89e7d0b9f17cc3c3))
+
 ## [0.6.1](https://github.com/ihadu/TokenArena/compare/v0.6.0...v0.6.1) (2026-06-05)
 
 
