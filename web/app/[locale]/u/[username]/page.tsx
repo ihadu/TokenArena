@@ -452,6 +452,7 @@ export default async function PublicProfilePage({
           targetUserId={profile.id}
           query={adminQuery}
           basePath={`/u/${username}`}
+          viewerIsAdmin={isAdmin}
         />
       ) : null}
     </SocialShell>

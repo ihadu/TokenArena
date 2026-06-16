@@ -1,9 +1,11 @@
 import "server-only";
 
+import { Download } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 import type { z } from "zod";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { AdminComparisonCard } from "@/components/usage/admin-comparison-card";
 import { AdminHabitsCard } from "@/components/usage/admin-habits-card";
@@ -24,6 +26,7 @@ type Props = {
   targetUserId: string;
   query: z.infer<typeof dashboardQuerySchema>;
   basePath: string;
+  viewerIsAdmin: boolean;
   badgesSlot?: ReactNode;
 };
 
@@ -32,6 +35,7 @@ export async function AdminDashboardBlock({
   targetUserId,
   query,
   basePath,
+  viewerIsAdmin,
   badgesSlot,
 }: Props) {
   const { dashboard, preference } = await getUsageDashboardData({
@@ -62,7 +66,22 @@ export async function AdminDashboardBlock({
             {t("badge")}
           </Badge>
         </div>
-        <div className="text-xs text-muted-foreground">{t("notice")}</div>
+        <div className="flex items-center gap-3">
+          <div className="text-xs text-muted-foreground">{t("notice")}</div>
+          {viewerIsAdmin ? (
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="border-amber-500/60 text-amber-700 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-950/40"
+            >
+              <a href="/api/admin/weekly-export" download>
+                <Download className="mr-1.5 h-3.5 w-3.5" />
+                {t("weeklyExport.downloadButton")}
+              </a>
+            </Button>
+          ) : null}
+        </div>
       </header>
       <CardContent className="space-y-4 px-4 pb-4 pt-4">
         <FiltersBar
@@ -97,13 +116,13 @@ export async function AdminDashboardBlock({
         />
         <BreakdownGrid
           breakdowns={dashboard.breakdowns}
-          viewerIsAdmin
+          viewerIsAdmin={viewerIsAdmin}
           projectMode={preference.projectMode}
         />
         <SessionsSection
           sessions={dashboard.sessions}
           timezone={preference.timezone}
-          viewerIsAdmin
+          viewerIsAdmin={viewerIsAdmin}
           projectMode={preference.projectMode}
         />
         <div className="grid gap-4 lg:grid-cols-2">
