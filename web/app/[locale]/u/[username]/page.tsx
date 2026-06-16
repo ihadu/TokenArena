@@ -152,7 +152,8 @@ export default async function PublicProfilePage({
   const resolvedSearchParams = (searchParams ? await searchParams : {}) ?? {};
   const adminQuery = resolveAdminQuery(resolvedSearchParams);
   const isAdmin = await isCurrentUserAdmin();
-  const canRenderAdminBlock = isAdmin && viewer?.user.id !== profile.id;
+  const isSelf = viewer?.user.id === profile.id;
+  const canRenderAdminBlock = isAdmin || isSelf;
 
   if (canRenderAdminBlock && viewer) {
     void logAdminAccess({
