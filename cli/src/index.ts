@@ -18,6 +18,7 @@ import "./parsers/kiro.js";
 import "./parsers/roo-code.js";
 import "./parsers/cursor.js";
 import "./parsers/workbuddy.js";
+import "./parsers/deepseek-harness.js";
 
 import { createCli } from "./cli.js";
 import { isMainModule } from "./infrastructure/runtime/main-module.js";
